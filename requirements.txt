@@ -1,0 +1,14 @@
+# requirements.txt
+
+numpy
+torch
+torchvision
+faiss-cpu 
+matplotlib
+seaborn
+pandas
+tqdm
+jupyterlab
+Pillow
+transformers
+sentencepiece
