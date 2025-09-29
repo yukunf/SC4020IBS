@@ -205,3 +205,27 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE / OS files
+.idea/
+.vscode/
+.DS_Store
+Jupyter: Restart Kernel
+
+# Generated data files
+data/*.npy
+data/*.json
+# Keep the essential metadata file
+!data/deepfashion_metadata_final.csv
+
+# Large data directories
+data/img_highres/
+data/Anno/
+data/Eval/
+
+# Archive
+archive/
