@@ -196,59 +196,48 @@ if __name__ == "__main__":
     print("Index total vectors:", index_flat.ntotal)
 
     ntotal = index_flat.ntotal
-    rand_idx = np.random.randint(0, ntotal)
-    query_vec = index_flat.reconstruct(rand_idx).reshape(1, -1)
-
-    k = 10
-    D_flat, I_flat = index_flat.search(query_vec, k)
-
-    print(f"\n🔍 [Flat] Random query vector ID: {rand_idx} (label={labels[rand_idx]})")
-    print(f"Top-{k} nearest neighbor IDs:", I_flat[0])
-    print(f"Corresponding labels:", labels[I_flat[0]])
-    print(f"Distances:", D_flat[0])
+    k = 20
 
     # -----------------------------
-    # 简单 recall@k 检验 (Flat 理论=1.0)
-    # -----------------------------
-    recall_flat = np.mean([
-        len(set(I_flat[i, :k]) & set(I_flat[i, :k])) / k
-        for i in range(I_flat.shape[0])
-    ])
-    print(f"[Flat] Recall@{k}: {recall_flat:.3f}")
-
-    # -----------------------------
-    # 2️⃣ PCA 降维版索引测试
+    # 2️⃣ PCA 降维版索引
     # -----------------------------
     INDEX_PATH_PCA = INDEX_PATH.replace(".index", "_pca.index")
     index_pca = load_or_create_index(
         vectors_path=VECTORS_PATH,
         index_path=INDEX_PATH_PCA,
         model_name="fashion-clip",
-        index_factory_str="PCA256,Flat",   # ← 用 factory 构建 PCA 降维索引
+        index_factory_str="PCA64,Flat",  # 可改为 PCA128、PCA256 等
         metric="L2"
     )
 
-    D_pca, I_pca = index_pca.search(query_vec, k)
+    # -----------------------------
+    # 3️⃣ 每个 label 随机抽一个样本做查询
+    # -----------------------------
+    unique_labels = np.unique(labels)
+    recall_per_label = []
 
-    print(f"\n🔍 [PCA] Random query vector ID: {rand_idx} (label={labels[rand_idx]})")
-    print(f"Top-{k} nearest neighbor IDs:", I_pca[0])
-    print(f"Corresponding labels:", labels[I_pca[0]])
-    print(f"Distances:", D_pca[0])
+    for lb in unique_labels:
+        idxs = np.where(labels == lb)[0]
+        if len(idxs) == 0:
+            continue
+        rand_idx = int(np.random.choice(idxs))
+        query_vec = index_flat.reconstruct(rand_idx).reshape(1, -1)
+
+        # Flat 检索
+        D_flat, I_flat = index_flat.search(query_vec, k)
+        # PCA 检索
+        D_pca, I_pca = index_pca.search(query_vec, k)
+
+        # Label-level Recall
+        recall_label = len(set(labels[I_pca[0, :k]]) & set(labels[I_flat[0, :k]])) \
+                       / len(set(labels[I_flat[0, :k]]))
+        recall_per_label.append(recall_label)
+
+        print(f"Label {lb}: query ID={rand_idx}, recall={recall_label:.3f}")
 
     # -----------------------------
-    # 与 Flat 的 Recall 对比
+    # 4️⃣ 求平均 Recall
     # -----------------------------
-    recall_pca = np.mean([
-        len(set(labels[I_pca[i, :k]]) & set(labels[I_flat[i, :k]]))
-        / len(set(labels[I_flat[i, :k]]))
-        for i in range(I_pca.shape[0])
-    ])
-    print(f"[PCA] Label-level Recall@{k} vs Flat ground truth: {recall_pca:.3f}")
-
-    # -----------------------------
-    # 结果总结
-    # -----------------------------
+    mean_recall = np.mean(recall_per_label) if recall_per_label else 0.0
     print("\n📊 Summary:")
-    print(f"Flat Recall@{k}: {recall_flat:.3f}")
-    print(f"PCA Recall@{k}:  {recall_pca:.3f}")
-
+    print(f"Label-level Recall@{k} averaged over {len(recall_per_label)} labels: {mean_recall:.3f}")
