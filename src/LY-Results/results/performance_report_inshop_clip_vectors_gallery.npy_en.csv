@@ -1,0 +1,5 @@
+Algorithm,Build Time (s),Avg Query Time (ms),QPS,Memory (MB),Accuracy@1,Accuracy@10,Accuracy@50,Tables,Hash Size,Avg Bucket Size
+brute_force,0.0405,0.2230,4484.63,117.19,,,,,,
+lsh_config_1,0.3582,2.6000,384.61,117.47,100.00%,14.93%,6.64%,5.0,8.0,58.59
+lsh_config_2,0.7570,0.9699,1031.00,117.76,100.00%,13.03%,5.00%,10.0,10.0,14.67
+lsh_config_3,1.6889,0.5213,1918.37,118.33,100.00%,11.84%,4.02%,20.0,12.0,3.98
