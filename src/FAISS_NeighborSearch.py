@@ -119,15 +119,16 @@ def load_or_create_index(
             and meta.get("index_type") == index_factory_str
             and meta.get("vectors_md5") == md5sum(vectors_path)
         ):
-            print(f"✅ Loading existing index from {index_path}")
+            print(f"Loading existing index from {index_path}")
             return faiss.read_index(index_path)
 
-        print("⚠️ Meta changed — rebuilding index...")
+        print("Meta changed — rebuilding index...")
 
 
-    print("🔧 Building new index:", index_factory_str)
+    print("Building new index:", index_factory_str)
     xb = np.load(vectors_path).astype("float32", order="C")
     d = xb.shape[1]
+    print("Vectors dimension:", d)
     metric_type = faiss.METRIC_L2 if metric.upper() == "L2" else faiss.METRIC_INNER_PRODUCT
 
     index = faiss.index_factory(d, index_factory_str, metric_type)
@@ -158,7 +159,7 @@ def load_or_create_index(
     }
     with open(meta_path, "w") as f:
         json.dump(meta, f, indent=2)
-    print(f"✅ Index and meta saved to {index_path}")
+    print(f"Index and meta saved to {index_path}")
 
     return index
 
@@ -239,5 +240,5 @@ if __name__ == "__main__":
     # 4️⃣ 求平均 Recall
     # -----------------------------
     mean_recall = np.mean(recall_per_label) if recall_per_label else 0.0
-    print("\n📊 Summary:")
+    print("\n Summary:")
     print(f"Label-level Recall@{k} averaged over {len(recall_per_label)} labels: {mean_recall:.3f}")
