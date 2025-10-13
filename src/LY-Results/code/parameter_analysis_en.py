@@ -278,16 +278,16 @@ def generate_analysis_report(param_df, scale_df):
     
     report.append("### 1.3 Parameter Impact Analysis")
     report.append("**Impact of Number of Tables:**")
-    tables_corr = param_df.groupby('num_tables')[['build_time', 'avg_query_time_ms', 'recall_at_10']].mean()
-    report.append(f"- Build time correlation with table count: {tables_corr['build_time'].corr(pd.Series(tables_corr.index)):.3f}")
-    report.append(f"- Query time correlation with table count: {tables_corr['avg_query_time_ms'].corr(pd.Series(tables_corr.index)):.3f}")
-    report.append(f"- Recall correlation with table count: {tables_corr['recall_at_10'].corr(pd.Series(tables_corr.index)):.3f}\n")
+    # 直接在原始数据框上计算相关性，而不是对聚合后的均值计算
+    report.append(f"- Build time correlation with table count: {param_df['num_tables'].corr(param_df['build_time']):.3f}")
+    report.append(f"- Query time correlation with table count: {param_df['num_tables'].corr(param_df['avg_query_time_ms']):.3f}")
+    report.append(f"- Recall correlation with table count: {param_df['num_tables'].corr(param_df['recall_at_10']):.3f}\n")
     
     report.append("**Impact of Hash Size:**")
-    hash_corr = param_df.groupby('hash_size')[['build_time', 'avg_query_time_ms', 'recall_at_10']].mean()
-    report.append(f"- Build time correlation with hash size: {hash_corr['build_time'].corr(pd.Series(hash_corr.index)):.3f}")
-    report.append(f"- Query time correlation with hash size: {hash_corr['avg_query_time_ms'].corr(pd.Series(hash_corr.index)):.3f}")
-    report.append(f"- Recall correlation with hash size: {hash_corr['recall_at_10'].corr(pd.Series(hash_corr.index)):.3f}\n")
+    # 直接在原始数据框上计算相关性，而不是对聚合后的均值计算
+    report.append(f"- Build time correlation with hash size: {param_df['hash_size'].corr(param_df['build_time']):.3f}")
+    report.append(f"- Query time correlation with hash size: {param_df['hash_size'].corr(param_df['avg_query_time_ms']):.3f}")
+    report.append(f"- Recall correlation with hash size: {param_df['hash_size'].corr(param_df['recall_at_10']):.3f}\n")
     
     report.append("## 2. Scalability Analysis Summary\n")
     
