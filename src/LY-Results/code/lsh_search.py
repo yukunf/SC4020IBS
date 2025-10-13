@@ -162,7 +162,7 @@ class LSHIndex:
                 distances = np.linalg.norm(candidate_vectors - query_vector, axis=1)
             
             # 3. 选择top-k
-            if len(distances) >= k:
+            if len(distances) > k:
                 top_k_idx = np.argpartition(distances, k)[:k]
                 top_k_idx = top_k_idx[np.argsort(distances[top_k_idx])]
             else:
