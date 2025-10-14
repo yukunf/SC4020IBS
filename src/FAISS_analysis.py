@@ -12,8 +12,8 @@ PROJECT_DIR = os.path.dirname(BASE_DIR)
 
 INSHOP_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_gallery.npy")
 INSHOP_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_query.npy")
-INSHOP_VECTOR_GALLERY_IDS_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_gallery.npy")
-INSHOP_VECTOR_QUERY_IDS_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_query.npy")
+INSHOP_LABEL_GALLERY_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_gallery.npy")
+INSHOP_LABEL_QUERY_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_query.npy")
 
 FMNIST_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "FMNIST_gallery_vectors.npy")
 FMNIST_LABEL_GALLERY = os.path.join(PROJECT_DIR, "data", "FMNIST_gallery_labels.npy")
@@ -56,7 +56,7 @@ def create_ivf_index(
         model_name="fashion-clip",
         index_factory_str=index_factory_str,
         metric=metric,
-        force_rebuild=False,
+        force_rebuild=True,
     )
 
     try:
@@ -175,7 +175,7 @@ def _facet_by_pca(df: pd.DataFrame, value_col: str, title_prefix: str, cmap="vir
     return fig
 
 
-def plot_ivf_build_and_size_panels(df: pd.DataFrame):
+def plot_ivf_build_and_size_panels(df: pd.DataFrame,dataset_title: str):
     agg = df.groupby(["pca_dim", "nlist"], as_index=False)[["build_time_s", "index_size_mb"]].mean()
 
     piv_build = agg.pivot_table(index="pca_dim", columns="nlist", values="build_time_s", aggfunc="mean").sort_index().sort_index(axis=1)
@@ -200,25 +200,25 @@ def plot_ivf_build_and_size_panels(df: pd.DataFrame):
     axes[1].set_yticks(np.arange(piv_size.shape[0])); axes[1].set_yticklabels(piv_size.index.astype(int))
     fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
 
-    fig.suptitle("IVF — PCA × nlist")
+    fig.suptitle(f"Dataset:{dataset_title} IVF — PCA × nlist")
     fig.tight_layout()
     return fig
 
 
 
-def plot_ivf_querytime_by_pca(df: pd.DataFrame):
-    return _facet_by_pca(df, value_col="query_time_ms", title_prefix="Query Time (ms)", cmap="coolwarm")
+def plot_ivf_querytime_by_pca(df: pd.DataFrame,dataset_title: str):
+    return _facet_by_pca(df, value_col="query_time_ms", title_prefix=f"Data:{dataset_title} Query Time (ms)", cmap="coolwarm")
 
-def plot_ivf_vector_recall_by_pca(df: pd.DataFrame, k_val: int = 20):
-    fig = _facet_by_pca(df, value_col="vector_recall_at_k", title_prefix=f"Vector Recall@{k_val}", cmap="viridis")
+def plot_ivf_vector_recall_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
+    fig = _facet_by_pca(df, value_col="vector_recall_at_k", title_prefix=f"Data:{dataset_title} Vector Recall@{k_val}", cmap="viridis")
     return fig
 
-def plot_ivf_label_precision_by_pca(df: pd.DataFrame, k_val: int = 20):
-    fig = _facet_by_pca(df, value_col="label_precision_at_k_micro", title_prefix=f"Label Precision@{k_val} (micro)", cmap="plasma")
+def plot_ivf_label_precision_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
+    fig = _facet_by_pca(df, value_col="label_precision_at_k_micro", title_prefix=f"Data:{dataset_title} Label Precision@{k_val} (micro)", cmap="plasma")
     return fig
 
-def plot_ivf_label_recall_by_pca(df: pd.DataFrame, k_val: int = 20):
-    fig = _facet_by_pca(df, value_col="label_recall_at_k_micro", title_prefix=f"Label Recall@{k_val} (micro)", cmap="viridis")
+def plot_ivf_label_recall_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
+    fig = _facet_by_pca(df, value_col="label_recall_at_k_micro", title_prefix=f"Data:{dataset_title} Label Recall@{k_val} (micro)", cmap="viridis")
     return fig
 
 def plot_ivf_macro_for_label(df_label: pd.DataFrame, label_id: int, k_val: int = 20):
@@ -333,13 +333,19 @@ def plot_hnsw_recall(df: pd.DataFrame, k_val: int = 20):
 #================== Grid Search ========================
 
 def grid_search_ivf(
+
     nlist_param,              # [256, 512, 1024]
     nprobe_param,             # [1, 4, 8, 16, 32]
     pca_dim_param,            # [None, 64, 128, 256]
     indexBuilder=create_ivf_index,
     k: int = 20,              # 固定 k
     n_per_label=None,         # 不再抽样，默认用全部 query；如需抽样可传入整数
-    save_csv=None             # 若给路径，将额外保存 per-label 统计为 <save_csv>_per_label.csv
+    save_csv=None,             # 若给路径，将额外保存 per-label 统计为 <save_csv>_per_label.csv
+    gallery_vector_path = FMNIST_VECTOR_GALLERY,
+    gallery_label_path = FMNIST_LABEL_GALLERY,
+    query_vector_path = FMNIST_VECTOR_QUERY,
+    query_label_path = FMNIST_LABEL_QUERY
+
 ):
     """
     Gallery-only build; Query-only evaluate.
@@ -349,13 +355,13 @@ def grid_search_ivf(
       - label_precision_at_k_micro、label_recall_at_k_micro
     另返回/保存 per-label 的 precision@k / recall@k（macro 参考）
     """
-    # ---------- 1) 加载数据 ----------
-    xb_gallery = np.load(FMNIST_VECTOR_GALLERY).astype("float32", order="C")
-    y_gallery  = np.load(FMNIST_LABEL_GALLERY).astype(int)
-    x_query    = np.load(FMNIST_VECTOR_QUERY).astype("float32", order="C")
-    y_query    = np.load(FMNIST_LABEL_QUERY).astype(int)
+    # ---------- 1) Load ----------
+    xb_gallery = np.load(gallery_vector_path).astype("float32", order="C")
+    y_gallery  = np.load(gallery_label_path).astype(int)
+    x_query    = np.load(query_vector_path).astype("float32", order="C")
+    y_query    = np.load(query_label_path).astype(int)
 
-    # 可选：对 query 做分层抽样（按 label）
+    # Optional Startified Sampling
     if isinstance(n_per_label, int) and n_per_label > 0:
         q_keep = []
         for lb in np.unique(y_query):
@@ -372,24 +378,24 @@ def grid_search_ivf(
 
     nq, d = xq.shape
 
-    # ---------- 2) 准备 GT（Flat on Gallery） ----------
-    temp_dir = os.path.join(os.path.dirname(FMNIST_VECTOR_GALLERY), "temp_faiss")
+    # ---------- 2) （Flat on Gallery） ----------
+    temp_dir = os.path.join(os.path.dirname(gallery_vector_path), "temp_faiss")
     os.makedirs(temp_dir, exist_ok=True)
     baseline_path = os.path.join(temp_dir, "gallery_flat.index")
 
     index_flat = FAISS_NeighborSearch.load_or_create_index(
-        vectors_path=FMNIST_VECTOR_GALLERY,
+        vectors_path=gallery_vector_path,
         index_path=baseline_path,
         model_name="fashion-clip",
         index_factory_str="Flat",
         metric="L2",
-        force_rebuild=False,
+        force_rebuild=True,
     )
 
-    # GT: 在 Flat-Gallery 上批量搜索 Top-k
-    Dg, Ig = index_flat.search(xq, int(k))  # (nq, k) —— gallery 的行号
 
-    # 为标签级 recall 预先统计每类在 gallery 的基数
+    Dg, Ig = index_flat.search(xq, int(k))  # (nq, k) —— gallery
+
+    # Count label
     _, counts = np.unique(y_gallery, return_counts=True)
     label_card = dict(zip(np.unique(y_gallery), counts))
 
@@ -400,13 +406,12 @@ def grid_search_ivf(
     for pca_dim in pca_dim_param:
         for nlist in nlist_param:
             for nprobe in nprobe_param:
-                # 固定索引路径（覆盖写）
+
                 idx_path = os.path.join(temp_dir, "ivf.index")
 
-                # 3.1 构建索引（仅用 gallery）
                 t0 = time.perf_counter()
                 index = indexBuilder(
-                    vectors_path=FMNIST_VECTOR_GALLERY,   # ✅ 只用 gallery
+                    vectors_path=gallery_vector_path,
                     index_path=idx_path,
                     nlist=int(nlist),
                     nprobe=int(nprobe),
@@ -415,7 +420,7 @@ def grid_search_ivf(
                 )
                 build_time_s = time.perf_counter() - t0
 
-                # 文件大小
+                # File Size
                 if os.path.exists(idx_path):
                     faiss.write_index(index, idx_path)  # ensure persisted
                     index = faiss.read_index(idx_path)  # reload for consistency
@@ -423,23 +428,21 @@ def grid_search_ivf(
                 else:
                     index_size_mb = np.nan
 
-                # 3.2 在该索引上批量查询
+                # 3.2 Batch Query
                 t1 = time.perf_counter()
-                Da, Ia = index.search(xq, int(k))  # (nq, k) —— gallery 的行号
+                Da, Ia = index.search(xq, int(k))  # (nq, k) —— gallery
                 qtime = time.perf_counter() - t1
                 avg_query_ms = (qtime / max(1, nq)) * 1000.0
 
-                # ---------- 4) 向量级 Recall@k（ANN recall） ----------
-                # 与 GT（Flat-Gallery）前 k 的重合比例
-                # 注意：Ig/Ia 的索引都是相对于 gallery 的行号，无需再映射
+                # ---------- 4) Recall@k（ANN recall）for vector ----------
                 overlaps = []
                 for i in range(nq):
                     overlaps.append(len(set(Ia[i]).intersection(set(Ig[i]))) / float(k))
                 vector_recall_at_k = float(np.mean(overlaps)) if overlaps else 0.0
 
-                # ---------- 5) 标签级 Precision@k / Recall@k ----------
-                # per-query precision@k：命中同标签的比例
-                # per-query recall@k：命中数 / 该标签在 gallery 的总基数
+                # ---------- 5) Precision@k / Recall@k for label----------
+                # per-query precision@k
+                # per-query recall@k
                 per_query_prec = []
                 per_query_reca = []
                 for i in range(nq):
@@ -448,7 +451,6 @@ def grid_search_ivf(
                     per_query_prec.append(hits / float(k))
                     denom = label_card.get(int(yq[i]), 0)
                     per_query_reca.append((hits / float(denom)) if denom > 0 else 0.0)
-                    print("Query Label:",neigh_labels,"hits: ",hits / float(k))
 
                 label_precision_at_k_micro = float(np.mean(per_query_prec)) if per_query_prec else 0.0
                 label_recall_at_k_micro    = float(np.mean(per_query_reca)) if per_query_reca else 0.0
@@ -598,30 +600,62 @@ def grid_search_hnsw(
 
 
 if __name__ == "__main__":
-    # 参数空间
     nlist = [256, 512, 1024]
     nprobe = [1, 4, 8, 16, 32]
     pca_dim = [None, 64, 128, 256,512,1024]
     K = 20
 
-    # 运行搜索（新版 grid_search_ivf 返回 df, df_label）
+
     df, df_label = grid_search_ivf(
         nlist_param=nlist,
         nprobe_param=nprobe,
         pca_dim_param=pca_dim,
         indexBuilder=create_ivf_index,
         k=K,
-        n_per_label=None,  # 使用全量 query；如需抽样可设整数
-        save_csv="ivf_gallery_query_metrics.csv",
+        n_per_label=None,
+        save_csv="ivf_FMNIST_query_metrics.csv",
     )
 
     # === 只输出聚合后的大图 ===
-    plot_ivf_build_and_size_panels(df)
-    plot_ivf_querytime_by_pca(df)
-    plot_ivf_vector_recall_by_pca(df, k_val=K)
-    plot_ivf_label_precision_by_pca(df, k_val=K)
-    plot_ivf_label_recall_by_pca(df, k_val=K)
+    plot_ivf_build_and_size_panels(df,'FMNIST')
+    plot_ivf_querytime_by_pca(df,'FMNIST')
+    plot_ivf_vector_recall_by_pca(df, 'FMNIST', k_val=K)
+    plot_ivf_label_precision_by_pca(df,'FMNIST', k_val=K)
+    plot_ivf_label_recall_by_pca(df, 'FMNIST',k_val=K)
 
+
+    plt.show()
+
+#Test for INSHOP Test data
+    nlist = [32, 64, 128, 256]
+    """ normally from 1~4 times of sqrt(N), FAISS prompts warning if centroids
+    is larger than 4sqrt(N) ( approximately)
+    """
+    nprobe = [1, 4, 8, 16, 32]
+    # Relatively fixed
+    pca_dim = [None, 64, 128, 256, 512, 1024]
+    K = 20
+
+    df, df_label = grid_search_ivf(
+        nlist_param=nlist,
+        nprobe_param=nprobe,
+        pca_dim_param=pca_dim,
+        indexBuilder=create_ivf_index,
+        k=K,
+        n_per_label=None,
+        save_csv="ivf_INSHOP_query_metrics.csv",
+        gallery_vector_path=INSHOP_VECTOR_GALLERY,
+        gallery_label_path=INSHOP_LABEL_GALLERY_NPY,
+        query_vector_path=INSHOP_VECTOR_QUERY,
+        query_label_path=INSHOP_LABEL_QUERY_NPY
+    )
+
+    # === 只输出聚合后的大图 ===
+    plot_ivf_build_and_size_panels(df,'INSHOP')
+    plot_ivf_querytime_by_pca(df,'INSHOP')
+    plot_ivf_vector_recall_by_pca(df, 'INSHOP', k_val=K)
+    plot_ivf_label_precision_by_pca(df,'INSHOP', k_val=K)
+    plot_ivf_label_recall_by_pca(df, 'INSHOP',k_val=K)
 
     plt.show()
 
