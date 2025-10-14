@@ -18,6 +18,12 @@ VECTORS_PATH = os.path.join(PROJECT_DIR, "data", "fmnist_resnet50_vectors.npy")
 IDS_PATH = os.path.join(PROJECT_DIR, "data", "fmnist_resnet50_labels.npy")
 INDEX_PATH = os.path.join(PROJECT_DIR, "data", "fmnist_resnet50.index")
 
+INSHOP_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_gallery.npy")
+INSHOP_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_query.npy")
+INSHOP_VECTOR_GALLERY_IDS = os.path.join(PROJECT_DIR, "data", "inshop_clip_ids_gallery.json")
+INSHOP_VECTOR_QUERY_IDS = os.path.join(PROJECT_DIR, "data", "inshop_clip_ids_query.json")
+
+
 
 def get_device():
     if torch.cuda.is_available(): return torch.device("cuda")
