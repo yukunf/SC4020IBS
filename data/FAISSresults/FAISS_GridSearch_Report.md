@@ -95,7 +95,7 @@
 
 ---
 
-## 🧠 二、HNSW（Hierarchical Navigable Small World Graph）参数说明
+##  二、HNSW（Hierarchical Navigable Small World Graph）参数说明
 
 ---
 
@@ -164,26 +164,131 @@
 
 
 ------
+
+
 ## Grid Search结果
 
-### IVF Index Grid Search
+### Benchmarks
 
-三个Hyper parameter中只有nlist和PCA Dimension会对训练时间，即Build Time产生影响，因为nprobe是运行时的查询参数。
+评价Index性能的Benchmark如下
 
-![img.png](img.png)
-其中 PCA 0即为不进行PCA压缩。
+- Build Time：IVF，HNSW等模型需要预先训练以构建新的数据，例如IVF分区和HNSW的图结构，同时PCA压缩也需要预先transform所有Gallery中的向量。该数据越小越好，即构筑Index的效率更高，对于大尺度数据较为重要。
+- Query Time：即Latency，查询给定新向量的neighbors时所用的时间。由于实验采用batch query，即一次将测试集喂给index，故测算了总时间后计算单个向量的平均时长作为估计值。越小越好
+- Index Size：即保存（持久化）后的index大小。由于实际上运用时FAISS Index必须存储在内存中否则I/O时间无法接受，故相对较大的Index可能使大数量级数据下内存吃紧或不足，难以执行大规模的分析。越小越好。
+- Precision
+  - On Label：测算返回的K Neighbor中的类型判断正确率，即(TP/TP+FN)，测算在压缩后是否能正确判断向量的label，越高越好
+  - On Vector：测算返回的K Neighbors中符合Ground Truth（即由完全准确的L2FlatIndex返回的k neighbors）的向量的正确率，越高越好，由于Ground Truth和实际QueryKNN时K值相同，这里Precision@20=Recall@20。进而因为K值相同，几乎等价地，Recall测算Groud Truth中的正确的KNeighbors向量的召回率，即向量层面的匹配，该值可能受因为PCA压缩或IVF等大幅影响，不过本问题重点在Label层面的准确率，该值仅供参考。
 
-明显可以发现PCA压缩对训练时间和Index大小都有正向优化作用，nlist对Build Time的影响较为混合，但是会略微对内存大小产生负面影响，可以考虑为
-额外的聚类和标记产生了一定数据量，但不显著。PCA压缩可以极大，且基本线性减少内存大小，考虑到其是将每个向量的维度进行压缩，这样的结果符合预期。
-------
-![img_1.png](img_1.png)
+Recall on Label因为实际同label向量数量远大于K值，故基本没有意义，可以研究Precision。
 
-关于请求时间，由于nprob参数决定运行时进行搜索的cluster数量，其越大即会增加需要搜索的向量数量，继而对运行时间产生负面影响。
-同一nprob下更大的nlist会产生更细的切分进而减少搜索时间，但是注意到向下对角线方向，即nprob*nlist相等的方向随着nlist增加搜索时间会相对增加，
-虽然表面上进行比对的向量接近，但更多的nlist，即cluster会增加I/O开销及有更多的稀疏向量需要比对，进而实际上增加了query time。
----
-![img_2.png](img_2.png)
 
-在我们的数据集下recall@20（基于label）基本都可以达到100%，影响不显著，但在nprob=，即只搜索一个cluster情况下注意到了recall的下降。说明PCA压缩和cluster划分增加
-会在recall和精确度上产生负面影响的tradeoff。但是由于我们的数据集较小，我们对原数据进行较大的压缩仍然能获得较好的结果。虽然没有呈现，但是基于
-完全精确的向量匹配的recall，各种压缩下均不能做到100%。但是由于本任务不要求此种精确匹配故不在优化的范围内。
+
+### Result on Dataset: FMNIST(n=70k,2048dim) and INSHOP(n=15k, 2048dim)
+
+![image-20251014215042592](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014215042592.png)
+
+![image-20251014202118778](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014202118778.png)
+
+PCA=0即None，为不进行PCA压缩的结果。注意到PCA压缩和IVF构建均需要额外计算所以会增加index构建的时间，而nlist越多则kmeans计算时的centroid更多，计算更慢。最多达到两倍差距，tradeoff仍可接受。至于index大小，nlist对实际size影响不大，而PCA压缩后的维数则直接决定了每个向量实际保存的维数，进而对index大小产生线性关系的影响，故使用PCA Dim可以在O(n)尺度上减少index需要的内存量。
+
+![image-20251014202056152](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014202056152.png)![image-20251014204534723](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014204534723.png)
+
+关于请求时间，由于nprob参数决定运⾏时进⾏搜索的cluster数量，其越⼤即会增加需要搜索的向量数量，继⽽对运⾏时间产⽣负⾯影响。同⼀nprob下更⼤的nlist会产⽣更细的切分进⽽减少搜索时间，但是注意到向下对⻆线⽅向，即nprob*nlist相等的⽅向随着nlist增加搜索时间会相对增加，虽然表⾯上进⾏⽐对的向量接近，但更多的nlist，即cluster会增加I/O开销及有更多的稀疏向量需要⽐对，进⽽实际上增加了query time.
+
+![image-20251014205742916](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014205742916.png)
+
+![image-20251014205749838](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014205749838.png)
+
+对于向量层面的Precision/Recall，PCA压缩会造成极大层面的影响。在无PCA压缩的情况下IVFIndex在大部分的nprob/nlist搭配下仍然能做到0.5～0.8左右的Recall，即能找到50%～80%其真正的最近邻。
+
+即使对FMNIST（70k）数据集只压缩一半维度即压缩到PCA1024也使得Recall几乎下降到了0.1以下，基本可以认为完全失真，而在较小的数据集INSHOP（15k）下表现尚可，能做到0.57的Recall，我们可以认为L2归一化的源向量集在压缩后，更大的数据集由于更加稠密，因而在压缩后估计时更难命中真正的NN。
+
+![image-20251014211249064](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014211249064.png)
+
+![image-20251014211257902](/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/FAISSresults/FAISS_GridSearch_Report.assets/image-20251014211257902.png)
+
+在在大幅压缩后两个数据集下基于Label匹配我们仍然能做到100%的Precision。考虑到原数据集相当大，如果只考虑类型的Label匹配时，大幅压缩也基本不影响precision。
+
+### Hyperparameters Optimization
+
+我们设计一套简单的代码对超参数进行优化，对数据进行minmax  standardization之后采用权重加权平均计算每种参数搭配的分数，之后列出最好的3种组合。对权重设计了三种倾向，分别是速度型、平衡型、和准确度型。
+
+由于该问题下label precision实际上相当容易保持在1，故我们给其较少的权重，注重vector层面的recall。
+
+预先设计的三种参数搭配如下：
+
+```python
+"speed": {
+        "query_time_ms": ("min", 0.5),
+        "build_time_s": ("min", 0.15),
+        "index_size_mb": ("min", 0.10),
+        "label_precision_at_k_micro": ("max", 0.2),
+        "vector_recall_at_k": ("max", 0.05),
+    },
+    "balanced": {
+        "query_time_ms": ("min", 0.2),
+        "build_time_s": ("min", 0.15),
+        "index_size_mb": ("min", 0.15),
+        "label_precision_at_k_micro": ("max", 0.20),
+        "vector_recall_at_k": ("max", 0.25),
+    },
+    "quality": {
+        "label_precision_at_k_micro": ("max", 0.35),
+        "vector_recall_at_k": ("max", 0.5),
+        "query_time_ms": ("min", 0.10),
+        "index_size_mb": ("min", 0.03),
+        "build_time_s": ("min", 0.02),
+    },
+```
+
+加权平均投票给出的超参数组合如下
+
+FMNIST数据集：
+
+```
+=== speed ===
+   pca_dim  nlist  nprobe     score
+0       64    256      16  0.865447
+1       64    256       4  0.862864
+2       64    256       8  0.862167
+
+=== balanced ===
+   pca_dim  nlist  nprobe     score
+0        0    256      16  0.692398
+1        0    512      32  0.692327
+2        0    256       8  0.683172
+
+=== quality ===
+   pca_dim  nlist  nprobe     score
+0        0    512      32  0.897138
+1        0    256      16  0.891021
+2        0    256      32  0.869351
+
+```
+
+INSHOP数据集：
+
+```
+=== speed ===
+   pca_dim  nlist  nprobe     score
+0        0     64       1  0.845644
+1        0    256       1  0.844168
+2        0     32       1  0.843661
+
+=== balanced ===
+   pca_dim  nlist  nprobe     score
+0        0    128      32  0.780693
+1        0    128      16  0.776672
+2        0     32       8  0.775720
+
+=== quality ===
+   pca_dim  nlist  nprobe     score
+0        0    128      32  0.939516
+1        0     64      16  0.936451
+2        0     32       8  0.932748
+
+```
+
+对于更小的INSHOP数据集能注意到由于BuildTime和QueryTime的Tradeoff更加明显，且PCA压缩对recall影响很大，所以即使在速度权重上升的情况下依然没有选择pca压缩。
+
+注意到普遍的nlist（即centroid数量）取值在`sqrt(N)~4sqrt(N)`之间，即分别为264~1058及122~489左右，保证性能均衡下的nlist一般取了区间最小值即265及128。

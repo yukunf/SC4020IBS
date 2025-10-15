@@ -7,6 +7,18 @@ from typing import Optional, Union
 from src.FAISS_NeighborSearch import PROJECT_DIR
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+PROJECT_DIR = os.path.dirname(BASE_DIR)
+
+INSHOP_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_gallery.npy")
+INSHOP_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_query.npy")
+INSHOP_LABEL_GALLERY_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_gallery.npy")
+INSHOP_LABEL_QUERY_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_query.npy")
+
+FMNIST_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "FMNIST_gallery_vectors.npy")
+FMNIST_LABEL_GALLERY = os.path.join(PROJECT_DIR, "data", "FMNIST_gallery_labels.npy")
+FMNIST_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "FMNIST_query_vectors.npy")
+FMNIST_LABEL_QUERY = os.path.join(PROJECT_DIR, "data", "FMNIST_query_labels.npy")
 #=================== IVF Index Factory ==================
 def create_ivf_index(
     vectors_path: str = FAISS_NeighborSearch.VECTORS_PATH,
@@ -44,7 +56,7 @@ def create_ivf_index(
         model_name="fashion-clip",
         index_factory_str=index_factory_str,
         metric=metric,
-        force_rebuild=False,
+        force_rebuild=True,
     )
 
     try:
@@ -124,17 +136,50 @@ def _sample_query_ids(labels: np.ndarray, n_per_label: int = 2):
 
 # ========================= Plot Code =========================
 def _annotate_cells(ax, data):
-    """在热力图上标注数字"""
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            val = data[i, j]
-            if isinstance(val, (int, float)) and not np.isnan(val):
-                ax.text(j, i, f"{val:.2f}", ha="center", va="center", fontsize=8, color="black")
+            v = data[i, j]
+            if isinstance(v, (int, float)) and not np.isnan(v):
+                ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=8, color="black")
+
+import math
+
+def _facet_by_pca(df: pd.DataFrame, value_col: str, title_prefix: str, cmap="viridis"):
+    pcas = sorted(df["pca_dim"].unique())
+    cols = min(4, max(1, len(pcas)))
+    rows = math.ceil(len(pcas) / cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(4.5*cols, 4.0*rows))
+    axes = np.array(axes, ndmin=2)
+
+    used = 0
+    for i, p in enumerate(pcas):
+        r, c = divmod(i, cols)
+        ax = axes[r, c]
+        sub = df[df["pca_dim"] == p].groupby(["nprobe", "nlist"], as_index=False)[value_col].mean()
+        piv = sub.pivot_table(index="nprobe", columns="nlist", values=value_col, aggfunc="mean").sort_index().sort_index(axis=1)
+        im = ax.imshow(piv.values, aspect="auto", cmap=cmap)
+        _annotate_cells(ax, piv.values)
+        ax.set_title(f"PCA={int(p) if p!=0 else 'None'}")
+        ax.set_xlabel("nlist"); ax.set_ylabel("nprobe")
+        ax.set_xticks(np.arange(piv.shape[1])); ax.set_xticklabels(piv.columns.astype(int))
+        ax.set_yticks(np.arange(piv.shape[0])); ax.set_yticklabels(piv.index.astype(int))
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        used += 1
+
+    for j in range(used, rows*cols):
+        r, c = divmod(j, cols)
+        axes[r, c].axis("off")
+
+    fig.suptitle(f"{title_prefix} — (faceted by PCA)")
+    fig.tight_layout()
+    return fig
 
 
-def plot_build_and_size_panels(df: pd.DataFrame):
-    piv_build = df.pivot_table(index="pca_dim", columns="nlist", values="build_time_s", aggfunc="mean")
-    piv_size  = df.pivot_table(index="pca_dim", columns="nlist", values="index_size_mb", aggfunc="mean")
+def plot_ivf_build_and_size_panels(df: pd.DataFrame,dataset_title: str):
+    agg = df.groupby(["pca_dim", "nlist"], as_index=False)[["build_time_s", "index_size_mb"]].mean()
+
+    piv_build = agg.pivot_table(index="pca_dim", columns="nlist", values="build_time_s", aggfunc="mean").sort_index().sort_index(axis=1)
+    piv_size  = agg.pivot_table(index="pca_dim", columns="nlist", values="index_size_mb", aggfunc="mean").sort_index().sort_index(axis=1)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     cmap = "viridis"
@@ -155,90 +200,68 @@ def plot_build_and_size_panels(df: pd.DataFrame):
     axes[1].set_yticks(np.arange(piv_size.shape[0])); axes[1].set_yticklabels(piv_size.index.astype(int))
     fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
 
-    fig.suptitle("Build Time & Index Size vs PCA × nlist", fontsize=12)
-    fig.tight_layout()
-    return fig  # ✅ 返回 fig
-
-
-def plot_querytime_faceted_by_pca(df: pd.DataFrame):
-    """
-    Facet by PCA dim.
-    Each subplot: heatmap of query_time_ms with rows=nprobe, cols=nlist.
-    """
-    pcas = sorted(df["pca_dim"].unique())  # 0 代表 None
-    import math
-    cols = min(4, max(1, len(pcas)))
-    rows = math.ceil(len(pcas) / cols)
-
-    fig, axes = plt.subplots(rows, cols, figsize=(4.2*cols, 3.8*rows))
-    axes = np.array(axes, ndmin=2)
-    cmap = "coolwarm"
-
-    used = 0
-    for i, p in enumerate(pcas):
-        r, c = divmod(i, cols)
-        ax = axes[r, c]
-        sub = df[df["pca_dim"] == p]
-        # rows=nprobe, cols=nlist
-        piv = sub.pivot_table(index="nprobe", columns="nlist", values="query_time_ms", aggfunc="mean")
-        piv = piv.sort_index(axis=0).sort_index(axis=1)
-
-        im = ax.imshow(piv.values, aspect="auto", cmap=cmap)
-        # 数字标注
-        for ii in range(piv.shape[0]):
-            for jj in range(piv.shape[1]):
-                val = piv.values[ii, jj]
-                if isinstance(val, (int, float)) and not np.isnan(val):
-                    ax.text(jj, ii, f"{val:.2f}", ha="center", va="center", fontsize=8, color="black")
-
-        p_label = "None" if int(p) == 0 else str(int(p))
-        ax.set_title(f"PCA={p_label}")
-        ax.set_xlabel("nlist"); ax.set_ylabel("nprobe")
-        ax.set_xticks(np.arange(piv.shape[1])); ax.set_xticklabels(piv.columns.astype(int))
-        ax.set_yticks(np.arange(piv.shape[0])); ax.set_yticklabels(piv.index.astype(int))
-        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-        used += 1
-
-    # 隐藏多余子图
-    total = rows * cols
-    for j in range(used, total):
-        r, c = divmod(j, cols)
-        axes[r, c].axis("off")
-
-    fig.suptitle("Query Time (ms): nprobe × nlist (faceted by PCA dim)", fontsize=12)
+    fig.suptitle(f"Dataset:{dataset_title} IVF — PCA × nlist")
     fig.tight_layout()
     return fig
 
 
 
-def plot_recall_faceted(df: pd.DataFrame, k_val: int):
-    nprobes = sorted(df["nprobe"].unique())
-    cols = min(4, max(1, len(nprobes)))
-    rows = math.ceil(len(nprobes) / cols)
-    fig, axes = plt.subplots(rows, cols, figsize=(4.2*cols, 3.8*rows))
-    axes = np.array(axes, ndmin=2)
-    cmap = "viridis"
+def plot_ivf_querytime_by_pca(df: pd.DataFrame,dataset_title: str):
+    return _facet_by_pca(df, value_col="query_time_ms", title_prefix=f"Data:{dataset_title} Query Time (ms)", cmap="coolwarm")
 
-    for i, npb in enumerate(nprobes):
-        r, c = divmod(i, cols)
-        ax = axes[r, c]
-        sub = df[df["nprobe"] == npb]
-        piv = sub.pivot_table(index="pca_dim", columns="nlist", values="recall_at_k", aggfunc="mean")
-        im = ax.imshow(piv.values, aspect="auto", cmap=cmap)
-        _annotate_cells(ax, piv.values)
-        ax.set_title(f"nprobe={npb}")
-        ax.set_xlabel("nlist"); ax.set_ylabel("PCA dim")
-        ax.set_xticks(np.arange(piv.shape[1])); ax.set_xticklabels(piv.columns.astype(int))
-        ax.set_yticks(np.arange(piv.shape[0])); ax.set_yticklabels(piv.index.astype(int))
-        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+def plot_ivf_vector_recall_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
+    fig = _facet_by_pca(df, value_col="vector_recall_at_k", title_prefix=f"Data:{dataset_title} Vector Recall@{k_val}", cmap="viridis")
+    return fig
 
-    for j in range(len(nprobes), rows*cols):
-        r, c = divmod(j, cols)
-        axes[r, c].axis("off")
+def plot_ivf_label_precision_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
+    fig = _facet_by_pca(df, value_col="label_precision_at_k_micro", title_prefix=f"Data:{dataset_title} Label Precision@{k_val} (micro)", cmap="plasma")
+    return fig
 
-    fig.suptitle(f"Recall@{k_val} vs PCA × nlist (faceted by nprobe)", fontsize=12)
-    fig.tight_layout()
-    return fig  # ✅ 返回 fig
+def plot_ivf_label_recall_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
+    fig = _facet_by_pca(df, value_col="label_recall_at_k_micro", title_prefix=f"Data:{dataset_title} Label Recall@{k_val} (micro)", cmap="viridis")
+    return fig
+
+def plot_ivf_macro_for_label(df_label: pd.DataFrame, label_id: int, k_val: int = 20):
+    sub = df_label[df_label["label"] == int(label_id)].copy()
+    if sub.empty:
+        print(f"[warn] no data for label={label_id}")
+        return None
+
+    # 两个子图：precision_macro / recall_macro（PCA 分面：行列为 nprobe × nlist 的拼图）
+    def _facet(value_col: str, title: str, cmap="viridis"):
+        pcas = sorted(sub["pca_dim"].unique())
+        cols = min(4, max(1, len(pcas)))
+        rows = math.ceil(len(pcas) / cols)
+        fig, axes = plt.subplots(rows, cols, figsize=(4.5*cols, 4.0*rows))
+        axes = np.array(axes, ndmin=2)
+
+        used = 0
+        for i, p in enumerate(pcas):
+            r, c = divmod(i, cols)
+            ax = axes[r, c]
+            ss = sub[sub["pca_dim"] == p].groupby(["nprobe", "nlist"], as_index=False)[value_col].mean()
+            piv = ss.pivot_table(index="nprobe", columns="nlist", values=value_col, aggfunc="mean").sort_index().sort_index(axis=1)
+            im = ax.imshow(piv.values, aspect="auto", cmap=cmap)
+            _annotate_cells(ax, piv.values)
+            ax.set_title(f"PCA={int(p) if p!=0 else 'None'}")
+            ax.set_xlabel("nlist"); ax.set_ylabel("nprobe")
+            ax.set_xticks(np.arange(piv.shape[1])); ax.set_xticklabels(piv.columns.astype(int))
+            ax.set_yticks(np.arange(piv.shape[0])); ax.set_yticklabels(piv.index.astype(int))
+            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+            used += 1
+
+        for j in range(used, rows*cols):
+            r, c = divmod(j, cols)
+            axes[r, c].axis("off")
+
+        fig.suptitle(f"{title} (macro) — label={label_id}, Recall@{k_val}")
+        fig.tight_layout()
+        return fig
+
+    fig1 = _facet("precision_at_k_macro", "Label Precision")
+    fig2 = _facet("recall_at_k_macro", "Label Recall")
+    return fig1, fig2
+
 
 def plot_hnsw_build_and_size(df: pd.DataFrame):
     # 对同一(M, efConstruction)聚合（对 efSearch 取均值）
@@ -310,59 +333,85 @@ def plot_hnsw_recall(df: pd.DataFrame, k_val: int = 20):
 #================== Grid Search ========================
 
 def grid_search_ivf(
+
     nlist_param,              # [256, 512, 1024]
     nprobe_param,             # [1, 4, 8, 16, 32]
     pca_dim_param,            # [None, 64, 128, 256]
-    indexBuilder=create_ivf_index,    # pass builder function in
-    k: int = 20,              # ✅ 单一 k 值
-    n_per_label=2,
-    save_csv=None
+    indexBuilder=create_ivf_index,
+    k: int = 20,              # 固定 k
+    n_per_label=None,         # 不再抽样，默认用全部 query；如需抽样可传入整数
+    save_csv=None,             # 若给路径，将额外保存 per-label 统计为 <save_csv>_per_label.csv
+    gallery_vector_path = FMNIST_VECTOR_GALLERY,
+    gallery_label_path = FMNIST_LABEL_GALLERY,
+    query_vector_path = FMNIST_VECTOR_QUERY,
+    query_label_path = FMNIST_LABEL_QUERY
+
 ):
     """
-    Perform a grid search on (nlist, nprobe, pca_dim)
-      - build_time_s, query_time_ms(k), recall_at_k, index_size_mb
-    Returns：DataFrame
+    Gallery-only build; Query-only evaluate.
+    记录：
+      - build_time_s, query_time_ms, index_size_mb
+      - vector_recall_at_k（与 Flat-Gallery Top-k 重合度）
+      - label_precision_at_k_micro、label_recall_at_k_micro
+    另返回/保存 per-label 的 precision@k / recall@k（macro 参考）
     """
-    # --- Building data and ground truth ---
-    labels = np.load(FAISS_NeighborSearch.IDS_PATH)
-    xb = np.load(FAISS_NeighborSearch.VECTORS_PATH).astype("float32", order="C")
+    # ---------- 1) Load ----------
+    xb_gallery = np.load(gallery_vector_path).astype("float32", order="C")
+    y_gallery  = np.load(gallery_label_path).astype(int)
+    x_query    = np.load(query_vector_path).astype("float32", order="C")
+    y_query    = np.load(query_label_path).astype(int)
 
-    baseline_path = os.path.join(os.path.dirname(FAISS_NeighborSearch.VECTORS_PATH), "baseline_flat.index")
+    # Optional Startified Sampling
+    if isinstance(n_per_label, int) and n_per_label > 0:
+        q_keep = []
+        for lb in np.unique(y_query):
+            idxs = np.where(y_query == lb)[0]
+            if len(idxs) == 0:
+                continue
+            take = min(n_per_label, len(idxs))
+            picks = np.random.choice(idxs, size=take, replace=False)
+            q_keep.extend(picks.tolist())
+        q_keep = np.array(sorted(q_keep), dtype=int)
+        xq, yq = x_query[q_keep], y_query[q_keep]
+    else:
+        xq, yq = x_query, y_query
+
+    nq, d = xq.shape
+
+    # ---------- 2) （Flat on Gallery） ----------
+    temp_dir = os.path.join(os.path.dirname(gallery_vector_path), "temp_faiss")
+    os.makedirs(temp_dir, exist_ok=True)
+    baseline_path = os.path.join(temp_dir, "gallery_flat.index")
+
     index_flat = FAISS_NeighborSearch.load_or_create_index(
-        vectors_path=FAISS_NeighborSearch.VECTORS_PATH,
+        vectors_path=gallery_vector_path,
         index_path=baseline_path,
         model_name="fashion-clip",
         index_factory_str="Flat",
         metric="L2",
-        force_rebuild=False,
+        force_rebuild=True,
     )
 
-    qids = _sample_query_ids(labels, n_per_label=max(1, int(n_per_label)))
-    if not qids:
-        raise RuntimeError("No query ids sampled.")
 
-    # 预计算基线近邻（取到 k 即可）
-    BASE_NEI = {}
-    for qid in qids:
-        q = index_flat.reconstruct(int(qid)).reshape(1, -1)
-        Df, If = index_flat.search(q, int(k))
-        BASE_NEI[qid] = If[0]
+    Dg, Ig = index_flat.search(xq, int(k))  # (nq, k) —— gallery
+
+    # Count label
+    _, counts = np.unique(y_gallery, return_counts=True)
+    label_card = dict(zip(np.unique(y_gallery), counts))
 
     RESULTS = []
+    PER_LABEL_ROWS = []
 
-    # --- Grid Search ---
+    # ---------- 3) Grid Search ----------
     for pca_dim in pca_dim_param:
         for nlist in nlist_param:
             for nprobe in nprobe_param:
-                # 构建&计时
-                t0 = time.perf_counter()
-                temp_dir = os.path.join(os.path.dirname(FAISS_NeighborSearch.VECTORS_PATH), "temp_faiss")
-                os.makedirs(temp_dir, exist_ok=True)  # Create temp folder
-                idx_name = f"ivf_{'pca' + str(pca_dim) + '_' if pca_dim not in [None, 0] else ''}nlist{nlist}.index"
-                idx_path = os.path.join(temp_dir, idx_name)
 
+                idx_path = os.path.join(temp_dir, "ivf.index")
+
+                t0 = time.perf_counter()
                 index = indexBuilder(
-                    vectors_path=FAISS_NeighborSearch.VECTORS_PATH,
+                    vectors_path=gallery_vector_path,
                     index_path=idx_path,
                     nlist=int(nlist),
                     nprobe=int(nprobe),
@@ -371,20 +420,66 @@ def grid_search_ivf(
                 )
                 build_time_s = time.perf_counter() - t0
 
-                # 索引大小
-                index_size_mb = (os.path.getsize(idx_path) / (1024**2)) if os.path.exists(idx_path) else np.nan
+                # File Size
+                if os.path.exists(idx_path):
+                    faiss.write_index(index, idx_path)  # ensure persisted
+                    index = faiss.read_index(idx_path)  # reload for consistency
+                    index_size_mb = os.path.getsize(idx_path) / (1024**2)
+                else:
+                    index_size_mb = np.nan
 
-                # 查询一次（固定 k）
+                # 3.2 Batch Query
                 t1 = time.perf_counter()
-                recall_sum = 0.0
-                for qid in qids:
-                    q = index_flat.reconstruct(int(qid)).reshape(1, -1)
-                    Di, Ii = index.search(q, int(k))
-                    recall_sum += float((labels[Ii[0]] == labels[qid]).mean())
+                Da, Ia = index.search(xq, int(k))  # (nq, k) —— gallery
                 qtime = time.perf_counter() - t1
-                avg_query_ms = (qtime / len(qids)) * 1000.0
-                avg_recall = recall_sum / len(qids)
+                avg_query_ms = (qtime / max(1, nq)) * 1000.0
 
+                # ---------- 4) Recall@k（ANN recall）for vector ----------
+                overlaps = []
+                for i in range(nq):
+                    overlaps.append(len(set(Ia[i]).intersection(set(Ig[i]))) / float(k))
+                vector_recall_at_k = float(np.mean(overlaps)) if overlaps else 0.0
+
+                # ---------- 5) Precision@k / Recall@k for label----------
+                # per-query precision@k
+                # per-query recall@k
+                per_query_prec = []
+                per_query_reca = []
+                for i in range(nq):
+                    neigh_labels = y_gallery[Ia[i]]
+                    hits = np.sum(neigh_labels == yq[i])
+                    per_query_prec.append(hits / float(k))
+                    denom = label_card.get(int(yq[i]), 0)
+                    per_query_reca.append((hits / float(denom)) if denom > 0 else 0.0)
+
+                label_precision_at_k_micro = float(np.mean(per_query_prec)) if per_query_prec else 0.0
+                label_recall_at_k_micro    = float(np.mean(per_query_reca)) if per_query_reca else 0.0
+
+                # 同时统计每个 label 的 macro 指标（按该类的 query 求均值）
+                for lb in np.unique(yq):
+                    mask = (yq == lb)
+                    if not np.any(mask):
+                        continue
+                    Ia_lb = Ia[mask]
+                    # precision@k for this label
+                    precs = []
+                    recas = []
+                    denom = label_card.get(int(lb), 0)
+                    for row in Ia_lb:
+                        hits = np.sum(y_gallery[row] == lb)
+                        precs.append(hits / float(k))
+                        recas.append((hits / float(denom)) if denom > 0 else 0.0)
+                    PER_LABEL_ROWS.append({
+                        "pca_dim": int(pca_dim) if pca_dim not in [None, 0] else 0,
+                        "nlist": int(nlist),
+                        "nprobe": int(nprobe),
+                        "k": int(k),
+                        "label": int(lb),
+                        "precision_at_k_macro": float(np.mean(precs)) if precs else 0.0,
+                        "recall_at_k_macro": float(np.mean(recas)) if recas else 0.0,
+                    })
+
+                # ---------- 6) 记录一行整体结果 ----------
                 RESULTS.append({
                     "pca_dim": int(pca_dim) if pca_dim not in [None, 0] else 0,
                     "nlist": int(nlist),
@@ -393,14 +488,27 @@ def grid_search_ivf(
                     "build_time_s": round(build_time_s, 4),
                     "query_time_ms": round(avg_query_ms, 3),
                     "index_size_mb": round(index_size_mb, 2) if not np.isnan(index_size_mb) else np.nan,
-                    "recall_at_k": round(avg_recall, 4),
+                    "vector_recall_at_k": round(vector_recall_at_k, 4),
+                    "label_precision_at_k_micro": round(label_precision_at_k_micro, 4),
+                    "label_recall_at_k_micro": round(label_recall_at_k_micro, 4),
+                    "n_query": int(nq),
                 })
 
     df = pd.DataFrame(RESULTS)
+    df_label = pd.DataFrame(PER_LABEL_ROWS)
+
+    # 若指定保存路径，也把 per-label 一起保存
     if save_csv:
+        base = os.path.splitext(save_csv)[0]
         df.to_csv(save_csv, index=False)
-        print(f"Saved: {save_csv}")
-    return df
+        if not df_label.empty:
+            df_label.to_csv(base + "_per_label.csv", index=False)
+        print(f"Saved overall to: {save_csv}")
+        if not df_label.empty:
+            print(f"Saved per-label to: {base + '_per_label.csv'}")
+
+    # 返回两个 DataFrame：整体 & 每类
+    return df, df_label
 
 def grid_search_hnsw(
     M_param,                 # [16, 32, 48, 64]
@@ -492,30 +600,63 @@ def grid_search_hnsw(
 
 
 if __name__ == "__main__":
-    nlist = [256, 512, 1024, 2048]  # Based on the range of sqrt(N) to 4sqrt(N): 256 ~ 1024
+    nlist = [256, 512, 1024]
     nprobe = [1, 4, 8, 16, 32]
-    pca_dim = [None, 64, 128, 256, 512]
-    K = 20  # 单一 k
+    pca_dim = [None, 64, 128, 256,512,1024]
+    K = 20
 
-    df = grid_search_ivf(
+
+    df, df_label = grid_search_ivf(
         nlist_param=nlist,
         nprobe_param=nprobe,
         pca_dim_param=pca_dim,
         indexBuilder=create_ivf_index,
         k=K,
-        n_per_label=2,
-        save_csv=False,
+        n_per_label=None,
+        save_csv="ivf_FMNIST_query_metrics.csv",
     )
 
-    save_dir = os.path.join(PROJECT_DIR,"data/FAISSresults/plots")
-    os.makedirs(save_dir, exist_ok=True)
-    fig1 = plot_build_and_size_panels(df)
-    fig1.savefig(os.path.join(save_dir,"buildTime_and_size.png"), dpi=300, bbox_inches="tight")
+    # === 只输出聚合后的大图 ===
+    plot_ivf_build_and_size_panels(df,'FMNIST')
+    plot_ivf_querytime_by_pca(df,'FMNIST')
+    plot_ivf_vector_recall_by_pca(df, 'FMNIST', k_val=K)
+    plot_ivf_label_precision_by_pca(df,'FMNIST', k_val=K)
+    plot_ivf_label_recall_by_pca(df, 'FMNIST',k_val=K)
 
-    fig2 = plot_querytime_faceted_by_pca(df)
-    fig2.savefig(os.path.join(save_dir, "query_time.png"), dpi=300, bbox_inches="tight")
-    fig3 = plot_recall_faceted(df, K)
-    fig3.savefig(os.path.join(save_dir, "recall.png"), dpi=300, bbox_inches="tight")
+
+    plt.show()
+
+#Test for INSHOP Test data
+    nlist = [32, 64, 128, 256]
+    """ normally from 1~4 times of sqrt(N), FAISS prompts warning if centroids
+    is larger than 4sqrt(N) ( approximately)
+    """
+    nprobe = [1, 4, 8, 16, 32]
+    # Relatively fixed
+    pca_dim = [None, 64, 128, 256, 512, 1024]
+    K = 20
+
+    df, df_label = grid_search_ivf(
+        nlist_param=nlist,
+        nprobe_param=nprobe,
+        pca_dim_param=pca_dim,
+        indexBuilder=create_ivf_index,
+        k=K,
+        n_per_label=None,
+        save_csv="ivf_INSHOP_query_metrics.csv",
+        gallery_vector_path=INSHOP_VECTOR_GALLERY,
+        gallery_label_path=INSHOP_LABEL_GALLERY_NPY,
+        query_vector_path=INSHOP_VECTOR_QUERY,
+        query_label_path=INSHOP_LABEL_QUERY_NPY
+    )
+
+    # === 只输出聚合后的大图 ===
+    plot_ivf_build_and_size_panels(df,'INSHOP')
+    plot_ivf_querytime_by_pca(df,'INSHOP')
+    plot_ivf_vector_recall_by_pca(df, 'INSHOP', k_val=K)
+    plot_ivf_label_precision_by_pca(df,'INSHOP', k_val=K)
+    plot_ivf_label_recall_by_pca(df, 'INSHOP',k_val=K)
+
     plt.show()
 
     # M_list = [16, 32, 48, 64]
