@@ -149,7 +149,7 @@ def generate_analysis_report_fixed(param_df, scale_df, output_dir='reports'):
     """生成修复后的分析报告（包含代码块1.1和1.2的修复）"""
     print("\n=== 生成修复后的分析报告 ===")
     
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(os.path.join(PROJECT_DIR,'reports/LSHBFreports'), exist_ok=True)
     
     report = []
     
@@ -332,7 +332,7 @@ def main():
     print("\n可扩展性分析完成，结果已保存")
     
     # 3. 生成修复后的分析报告
-    report_path = generate_analysis_report_fixed(param_df, scale_df)
+    report_path = generate_analysis_report_fixed(param_df, scale_df,os.path.join(PROJECT_DIR,'doc/report/LSHBFreports'))
     
     print("\n=== 参数分析完成 ===")
     print("所有结果已保存到:")
