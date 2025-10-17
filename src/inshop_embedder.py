@@ -9,12 +9,12 @@ import os
 import json
 
 # --- 配置 ---
-METADATA_FILE = 'data/deepfashion_metadata_final.csv'
+METADATA_FILE = '../data/deepfashion_metadata_final.csv'
 MODEL_NAME = 'patrickjohncyh/fashion-clip' # 使用 Fashion-CLIP 模型
 BATCH_SIZE = 64
 
 # --- 输出文件路径 ---
-OUTPUT_DIR = 'data'
+OUTPUT_DIR = '../data'
 
 def get_device():
     if torch.cuda.is_available():
