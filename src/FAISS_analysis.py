@@ -613,7 +613,7 @@ if __name__ == "__main__":
         indexBuilder=create_ivf_index,
         k=K,
         n_per_label=None,
-        save_csv="ivf_FMNIST_query_metrics.csv",
+        save_csv=os.path.join(PROJECT_DIR,'data',"ivf_FMNIST_query_metrics.csv"),
     )
 
     # === 只输出聚合后的大图 ===
@@ -643,7 +643,7 @@ if __name__ == "__main__":
         indexBuilder=create_ivf_index,
         k=K,
         n_per_label=None,
-        save_csv="ivf_INSHOP_query_metrics.csv",
+        save_csv=os.path.join(PROJECT_DIR, 'data', "ivf_INSHOP_query_metrics.csv"),
         gallery_vector_path=INSHOP_VECTOR_GALLERY,
         gallery_label_path=INSHOP_LABEL_GALLERY_NPY,
         query_vector_path=INSHOP_VECTOR_QUERY,
