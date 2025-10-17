@@ -359,7 +359,7 @@ open results/optimization/pca_lsh_analysis_en.png
 ls code/lsh_optimized.py
 ls code/test_pca_lsh.py
 ls results/optimization/pca_lsh_analysis_en.png
-ls reports/pca_dimensionality_reduction_report.md
+ls LSHBFreports/pca_dimensionality_reduction_report.md
 ```
 
 ---
