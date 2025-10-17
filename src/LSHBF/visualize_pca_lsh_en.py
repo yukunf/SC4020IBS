@@ -12,8 +12,10 @@ import os
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+PROJECT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 # Load results
-results_dir = 'results/optimization'
+results_dir = os.path.join(PROJECT_DIR,'doc/report/LSHBFreports','results/optimization')
 df_dim = pd.read_csv(f'{results_dir}/pca_dimension_analysis.csv')
 df_512 = pd.read_csv(f'{results_dir}/pca_512_config_analysis.csv')
 
