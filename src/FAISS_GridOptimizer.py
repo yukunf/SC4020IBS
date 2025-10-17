@@ -1,4 +1,6 @@
 # Re-run the multi-preset optimizer (environment reset safety)
+import os
+
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
@@ -6,6 +8,8 @@ from dataclasses import dataclass
 import json
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 # ============== Configuration =================
 presets = {
     "speed": {
@@ -132,7 +136,7 @@ def optimize_with_presets(
 # Execute on your file
 if __name__ == "__main__":
     results = optimize_with_presets(
-        "ivf_gallery_query_metrics.csv",  # 换成你的文件
+        os.path.join(PROJECT_DIR, 'data', "ivf_FMNIST_query_metrics.csv"),
         param_cols=["pca_dim", "nlist", "nprobe"],
         normalize="minmax",  # or "zscore"
         filters=None,  #  {"k":[20]}
