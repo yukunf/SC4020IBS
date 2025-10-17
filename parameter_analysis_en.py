@@ -322,11 +322,11 @@ def generate_analysis_report(param_df, scale_df):
     report.append("- **Memory constraints**: Reduce number of hash tables, accept some accuracy loss")
     report.append("- **Build time sensitive**: Avoid too many hash tables, prioritize query time optimization\n")
     
-    # Save report
+    # Save doc
     with open('results/analysis/analysis_report_en.md', 'w', encoding='utf-8') as f:
         f.write('\n'.join(report))
     
-    print("Analysis report saved to: results/analysis/analysis_report_en.md")
+    print("Analysis doc saved to: results/analysis/analysis_report_en.md")
 
 def main():
     """Main function"""
@@ -348,7 +348,7 @@ def main():
     # 3. Generate visualization plots
     create_parameter_analysis_plots(param_df, scale_df)
     
-    # 4. Generate analysis report
+    # 4. Generate analysis doc
     generate_analysis_report(param_df, scale_df)
     
     print("\n=== Parameter Analysis Complete ===")
@@ -357,7 +357,7 @@ def main():
     print("- Scalability analysis: scalability_analysis_en.csv")
     print("- Parameter analysis plots: lsh_parameter_analysis.png")
     print("- Scalability plots: scalability_analysis.png")
-    print("- Detailed report: analysis_report_en.md")
+    print("- Detailed doc: analysis_report_en.md")
 
 if __name__ == '__main__':
     main()

@@ -311,14 +311,15 @@ def generate_analysis_report_fixed(param_df, scale_df, output_dir='reports'):
     print(f"分析报告已保存到: {report_path}")
     return report_path
 
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 def main():
     """主函数"""
     print("开始DeepFashion数据集的参数分析...")
     
     # 创建结果目录
     os.makedirs('results/analysis', exist_ok=True)
-    os.makedirs('reports', exist_ok=True)
+    os.makedirs(os.path.join(PROJECT_DIR,'doc/report/LSHBFreports'), exist_ok=True)
     
     # 1. LSH参数分析
     param_df = analyze_lsh_parameters_deepfashion()
