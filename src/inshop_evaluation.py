@@ -4,14 +4,18 @@ import time
 import argparse
 import pandas as pd
 from collections import defaultdict
+import os
 
 def evaluate_inshop_retrieval(k_values):
     """使用 In-shop 数据集的特征文件评估检索性能。"""
 
     # --- 1. 路径配置 ---
     # 我们只使用 test/gallery 数据集，并从中划分 query 和 gallery
-    VECTORS_PATH = 'data/inshop_clip_vectors_gallery.npy'
-    IDS_PATH = 'data/inshop_clip_ids_gallery.json'
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+    PROJECT_DIR = os.path.dirname(BASE_DIR)  # /path/to/project
+
+    VECTORS_PATH = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_gallery.npy")
+    IDS_PATH = os.path.join(PROJECT_DIR, "data", "inshop_clip_ids_gallery.json")
 
     # --- 2. 加载数据 ---
     print("Loading data files...")
