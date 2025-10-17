@@ -38,7 +38,7 @@
 
 ```bash
 # 删除命令
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results/analysis
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF/analysis
 rm -f analysis_report_en.md          # 旧的英文报告
 rm -f analysis_report.md              # 旧的中文报告
 rm -f lsh_parameter_analysis_en.csv   # 旧的参数分析CSV
@@ -57,7 +57,7 @@ rm -f scalability_analysis.png        # 旧的可扩展性图
 
 ```bash
 # 删除命令
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results/code
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF/code
 rm -f parameter_analysis_improved.py  # 旧的参数分析（已被fixed版本替代）
 rm -f lsh_deep_analysis.py            # 诊断用代码（问题已解决）
 rm -f visualize_optimization.py       # 中文版可视化（如果只用英文）
@@ -74,13 +74,13 @@ rm -f visualize_optimization.py       # 中文版可视化（如果只用英文�
 
 ```bash
 # 删除中文版图表
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results/results/optimization
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF/results/optimization
 rm -f lsh_optimization_visualization.png  # 中文版（有英文版）
 rm -f lsh_parameter_trends.png            # 中文版（有英文版）
 rm -f pca_lsh_analysis.png                # 中文版有乱码（有英文版）
 
 # 删除旧的问题诊断目录
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results/results
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF/results
 rm -rf Nah-Problem_Resolve/               # 早期问题诊断，已解决
 ```
 
@@ -96,7 +96,7 @@ rm -rf Nah-Problem_Resolve/               # 早期问题诊断，已解决
 
 ```bash
 # 如果只关注DeepFashion，可以删除Fashion-MNIST结果
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results/results
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF/results
 rm -f comparison_plots_fmnist_resnet50_vectors.npy_en.png
 rm -f performance_report_fmnist_resnet50_vectors.npy_en.csv
 ```
@@ -236,7 +236,7 @@ LY-Results/
 1. **先备份再删除**: 建议先创建一个备份
    ```bash
    cd /Users/cradle/Documents/GitHub/SC4020IBS/src
-   tar -czf LY-Results-backup-$(date +%Y%m%d).tar.gz LY-Results/
+   tar -czf LSHBF-backup-$(date +%Y%m%d).tar.gz LSHBF/
    ```
 
 2. **分阶段清理**: 可以先删除明显过时的文件，观察一段时间后再删除可选文件
