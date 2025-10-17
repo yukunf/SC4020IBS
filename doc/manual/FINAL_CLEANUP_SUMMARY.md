@@ -269,8 +269,8 @@ reports/
 ### 恢复方法（如需要）
 ```bash
 cd /Users/cradle/Documents/GitHub/SC4020IBS/src
-rm -rf LY-Results/
-tar -xzf LY-Results-backup-20251015-182536.tar.gz
+rm -rf LSHBF/
+tar -xzf LSHBF-backup-20251015-182536.tar.gz
 ```
 
 ---
@@ -280,7 +280,7 @@ tar -xzf LY-Results-backup-20251015-182536.tar.gz
 ### 1. 重现实验
 
 ```bash
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF
 
 # 运行PCA降维测试
 python code/test_pca_lsh.py
@@ -342,7 +342,7 @@ python code/visualize_pca_lsh_en.py
 
 ```bash
 # 1. 测试PCA+LSH是否正常
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF
 python code/test_pca_lsh.py
 
 # 2. 生成可视化是否正常

@@ -10,9 +10,9 @@ import os
 from brute_force_search import BruteForceSearch
 from lsh_search import LSHIndex
 import sys
-sys.path.append('.')
-from inshop_evaluation import evaluate_inshop_retrieval
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+sys.path.append('code')
+from src.inshop_evaluation import evaluate_inshop_retrieval
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # /path/to/project/src
 PROJECT_DIR = os.path.dirname(BASE_DIR)
 class UnifiedEvaluator:
     """Unified evaluation system for comparing three algorithm performances"""
@@ -262,15 +262,15 @@ class UnifiedEvaluator:
 
 def main():
     """Main function - run complete evaluation"""
-    evaluator = UnifiedEvaluator(output_dir="results")
+    evaluator = UnifiedEvaluator(output_dir="../../doc/report/LSHBFreports/results")
     
     # Evaluation configuration
     k_values = [1, 10, 50]
     test_size = 1000
     
     # 1. Evaluate Fashion-MNIST dataset
-    fmnist_vectors_path = os.path.join(PROJECT_DIR,"data/fmnist_resnet50_vectors.npy")
-    fmnist_labels_path = os.path.join(PROJECT_DIR,"data/fmnist_resnet50_labels.npy")
+    fmnist_vectors_path = os.path.join(PROJECT_DIR, "data/fmnist_resnet50_vectors.npy")
+    fmnist_labels_path = os.path.join(PROJECT_DIR, "data/fmnist_resnet50_labels.npy")
     
     if os.path.exists(fmnist_vectors_path):
         print("Evaluating Fashion-MNIST dataset...")
@@ -285,8 +285,8 @@ def main():
         print(f"Fashion-MNIST vectors not found at {fmnist_vectors_path}")
     
     # 2. Evaluate DeepFashion dataset
-    deepfashion_vectors_path = "data/inshop_clip_vectors_gallery.npy"
-    deepfashion_metadata_path = "data/inshop_clip_ids_gallery.json"
+    deepfashion_vectors_path = os.path.join(PROJECT_DIR, "data/inshop_clip_vectors_gallery.npy")
+    deepfashion_metadata_path = os.path.join(PROJECT_DIR, "data/inshop_clip_ids_gallery.json")
     
     if os.path.exists(deepfashion_vectors_path):
         print("\nEvaluating DeepFashion dataset...")

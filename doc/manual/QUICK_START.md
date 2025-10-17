@@ -45,7 +45,7 @@ results/optimization/lsh_parameter_trends_en.png
 ### 1. 测试PCA + LSH
 
 ```bash
-cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LY-Results
+cd /Users/cradle/Documents/GitHub/SC4020IBS/src/LSHBF
 python code/test_pca_lsh.py
 ```
 
