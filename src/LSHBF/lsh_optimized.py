@@ -238,7 +238,7 @@ def test_optimized_lsh():
     print("="*60)
     
     # 加载数据
-    vectors_path = '../../data/data_LY/inshop_clip_vectors_gallery.npy'
+    vectors_path = '../../data/inshop_clip_vectors_gallery.npy'
     vectors = np.load(vectors_path)
     print(f"\n加载数据: {len(vectors)} 个向量，维度 {vectors.shape[1]}")
     
@@ -362,7 +362,7 @@ def test_optimized_lsh():
     # 保存结果
     import pandas as pd
     df = pd.DataFrame(results, columns=['配置', '准确率@50(%)', '查询时间(ms)', '提升(%)'])
-    os.makedirs('results/optimization', exist_ok=True)
+    os.makedirs('../../doc/report/LSHBFreports/results/optimization', exist_ok=True)
     df.to_csv('results/optimization/lsh_optimization_comparison.csv', index=False, encoding='utf-8-sig')
     print(f"\n结果已保存到: results/optimization/lsh_optimization_comparison.csv")
     

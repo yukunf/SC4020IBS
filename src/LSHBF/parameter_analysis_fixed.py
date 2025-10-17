@@ -318,7 +318,7 @@ def main():
     print("开始DeepFashion数据集的参数分析...")
     
     # 创建结果目录
-    os.makedirs('results/analysis', exist_ok=True)
+    os.makedirs('../../doc/report/LSHBFreports/results/analysis', exist_ok=True)
     os.makedirs(os.path.join(PROJECT_DIR,'doc/report/LSHBFreports'), exist_ok=True)
     
     # 1. LSH参数分析

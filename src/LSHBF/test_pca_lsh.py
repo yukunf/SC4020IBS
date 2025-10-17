@@ -203,7 +203,7 @@ def test_pca_lsh():
     df_512 = pd.DataFrame(results_512)
     
     # 保存结果
-    os.makedirs('results/optimization', exist_ok=True)
+    os.makedirs('../../doc/report/LSHBFreports/results/optimization', exist_ok=True)
     df_dim.to_csv('results/optimization/pca_dimension_analysis.csv', index=False)
     df_512.to_csv('results/optimization/pca_512_config_analysis.csv', index=False)
     
