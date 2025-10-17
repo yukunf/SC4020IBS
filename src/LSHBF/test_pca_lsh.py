@@ -25,7 +25,7 @@ def test_pca_lsh():
     print("="*70)
     
     # 加载原始数据
-    vectors_path = '../../data/data_LY/inshop_clip_vectors_gallery.npy'
+    vectors_path = '../../data/inshop_clip_vectors_gallery.npy'
     vectors = np.load(vectors_path)
     print(f"\n原始数据: {len(vectors)} 个向量，维度 {vectors.shape[1]}")
     
@@ -204,8 +204,8 @@ def test_pca_lsh():
     
     # 保存结果
     os.makedirs('../../doc/report/LSHBFreports/results/optimization', exist_ok=True)
-    df_dim.to_csv('results/optimization/pca_dimension_analysis.csv', index=False)
-    df_512.to_csv('results/optimization/pca_512_config_analysis.csv', index=False)
+    df_dim.to_csv('../../doc/report/LSHBFreports/results/optimization/pca_dimension_analysis.csv', index=False)
+    df_512.to_csv('../../doc/report/LSHBFreports/results/optimization/pca_512_config_analysis.csv', index=False)
     
     # 创建可视化
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
@@ -307,7 +307,7 @@ PCA降维效果总结
                 fontsize=16, fontweight='bold', y=0.98)
     plt.tight_layout()
     
-    plt.savefig('results/optimization/pca_lsh_analysis.png', 
+    plt.savefig('../../doc/report/LSHBFreports/results/optimization/pca_lsh_analysis.png',
                dpi=300, bbox_inches='tight', facecolor='white')
     print("✓ 可视化已保存: results/optimization/pca_lsh_analysis.png")
     
