@@ -12,7 +12,8 @@ from lsh_search import LSHIndex
 import sys
 sys.path.append('.')
 from inshop_evaluation import evaluate_inshop_retrieval
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 class UnifiedEvaluator:
     """Unified evaluation system for comparing three algorithm performances"""
     
@@ -186,7 +187,7 @@ class UnifiedEvaluator:
         df.to_csv(report_path, index=False)
         print(f"\nPerformance report saved to: {report_path}")
         
-        # Print report
+        # Print doc
         print(f"\n{'-'*60}")
         print("PERFORMANCE SUMMARY")
         print(f"{'-'*60}")
@@ -268,8 +269,8 @@ def main():
     test_size = 1000
     
     # 1. Evaluate Fashion-MNIST dataset
-    fmnist_vectors_path = "data/fmnist_resnet50_vectors.npy"
-    fmnist_labels_path = "data/fmnist_resnet50_labels.npy"
+    fmnist_vectors_path = os.path.join(PROJECT_DIR,"data/fmnist_resnet50_vectors.npy")
+    fmnist_labels_path = os.path.join(PROJECT_DIR,"data/fmnist_resnet50_labels.npy")
     
     if os.path.exists(fmnist_vectors_path):
         print("Evaluating Fashion-MNIST dataset...")
