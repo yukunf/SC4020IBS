@@ -21,7 +21,7 @@ def analyze_lsh_parameters_deepfashion():
     print("=== LSH Parameter Analysis - DeepFashion ===")
     
     # 加载DeepFashion数据
-    vectors_path = '../../data/data_LY/inshop_clip_vectors_gallery.npy'
+    vectors_path = '../../data/inshop_clip_vectors_gallery.npy'
     vectors = np.load(vectors_path)
     
     # 选择测试集
@@ -92,7 +92,7 @@ def analyze_data_size_scalability_deepfashion():
     print("\n=== Data Size Scalability Analysis - DeepFashion ===")
     
     # 加载完整数据
-    full_vectors = np.load('../../data/data_LY/inshop_clip_vectors_gallery.npy')
+    full_vectors = np.load('../../data/inshop_clip_vectors_gallery.npy')
     
     # 不同数据规模
     data_sizes = [1000, 3000, 5000, 10000, 15000]
@@ -312,7 +312,7 @@ def generate_analysis_report_fixed(param_df, scale_df, output_dir='reports'):
     return report_path
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
-PROJECT_DIR = os.path.dirname(BASE_DIR)
+PROJECT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 def main():
     """主函数"""
     print("开始DeepFashion数据集的参数分析...")
@@ -323,12 +323,12 @@ def main():
     
     # 1. LSH参数分析
     param_df = analyze_lsh_parameters_deepfashion()
-    param_df.to_csv('results/analysis/lsh_parameter_analysis_deepfashion_fixed.csv', index=False)
+    param_df.to_csv(os.path.join(PROJECT_DIR,'doc/report/LSHBFreports', 'results/analysis/lsh_parameter_analysis_deepfashion_fixed.csv'), index=False)
     print("\nLSH参数分析完成，结果已保存")
     
     # 2. 可扩展性分析
     scale_df = analyze_data_size_scalability_deepfashion()
-    scale_df.to_csv('results/analysis/scalability_analysis_deepfashion_fixed.csv', index=False)
+    scale_df.to_csv(os.path.join(PROJECT_DIR,'doc/report/LSHBFreports', 'results/analysis/scalability_analysis_deepfashion_fixed.csv'), index=False)
     print("\n可扩展性分析完成，结果已保存")
     
     # 3. 生成修复后的分析报告

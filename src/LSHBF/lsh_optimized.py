@@ -363,7 +363,7 @@ def test_optimized_lsh():
     import pandas as pd
     df = pd.DataFrame(results, columns=['配置', '准确率@50(%)', '查询时间(ms)', '提升(%)'])
     os.makedirs('../../doc/report/LSHBFreports/results/optimization', exist_ok=True)
-    df.to_csv('results/optimization/lsh_optimization_comparison.csv', index=False, encoding='utf-8-sig')
+    df.to_csv('../../doc/report/LSHBFreports/results/optimization/lsh_optimization_comparison.csv', index=False, encoding='utf-8-sig')
     print(f"\n结果已保存到: results/optimization/lsh_optimization_comparison.csv")
     
     return results
