@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import time
-from src.brute_force_search import BruteForceSearch
-from src.lsh_search import LSHIndex
+from src.LSHBF.brute_force_search import BruteForceSearch
+from src.LSHBF.lsh_search import LSHIndex
 import os
 
 def analyze_lsh_parameters():
@@ -12,8 +12,8 @@ def analyze_lsh_parameters():
     print("=== LSH Parameter Analysis ===")
     
     # Load data
-    vectors = np.load('data/fmnist_resnet50_vectors.npy')
-    labels = np.load('data/fmnist_resnet50_labels.npy')
+    vectors = np.load('../../data/fmnist_resnet50_vectors.npy')
+    labels = np.load('../../data/fmnist_resnet50_labels.npy')
     
     # Select smaller test set for faster analysis
     test_size = 500
@@ -78,8 +78,8 @@ def analyze_data_size_scalability():
     print("\n=== Data Size Scalability Analysis ===")
     
     # Load full data
-    full_vectors = np.load('data/fmnist_resnet50_vectors.npy')
-    full_labels = np.load('data/fmnist_resnet50_labels.npy')
+    full_vectors = np.load('../../data/fmnist_resnet50_vectors.npy')
+    full_labels = np.load('../../data/fmnist_resnet50_labels.npy')
     
     # Different data sizes
     data_sizes = [1000, 5000, 10000, 20000, 50000, 70000]
