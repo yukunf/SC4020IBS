@@ -306,36 +306,36 @@ def evaluate_index_factory(
 
 
 if __name__ == "__main__":
-    # Xg = np.load(INSHOP_VECTOR_GALLERY).astype("float32", order="C")
-    # Lg = np.load(INSHOP_LABEL_GALLERY_NPY)
-    # Xq = np.load(INSHOP_VECTOR_QUERY).astype("float32", order="C")
-    # Lq = np.load(INSHOP_LABEL_QUERY_NPY)
-    #
-    # test_list = [
-    #     ("Flat", None),
-    #     ("PCA64,Flat", None),
-    #     ("PCA256,Flat", None),
-    #     ("IVF1024,Flat", {"nprobe": 16}),
-    #     ("IVF1024,PQ64", {"nprobe": 16}),
-    #     ("HNSW32", {"efSearch": 64}),
-    # ]
-    #
-    # out_dir = os.path.join(PROJECT_DIR, "data", "tmp_faiss_bench")
-    # os.makedirs(out_dir, exist_ok=True)
-    #
-    # for name, params in test_list:
-    #     idx_path = os.path.join(out_dir, f"{name.replace(',', '_')}.index")
-    #     evaluate_index_factory(
-    #         index_factory_str=name,
-    #         x_gallery=Xg,
-    #         y_gallery=Lg,
-    #         x_query=Xq,
-    #         y_query=Lq,
-    #         k=50,
-    #         metric="L2",
-    #         index_path=idx_path,
-    #         params=params
-    #     )
+    Xg = np.load(INSHOP_VECTOR_GALLERY).astype("float32", order="C")
+    Lg = np.load(INSHOP_LABEL_GALLERY_NPY)
+    Xq = np.load(INSHOP_VECTOR_QUERY).astype("float32", order="C")
+    Lq = np.load(INSHOP_LABEL_QUERY_NPY)
+
+    test_list = [
+        ("Flat", None),
+        ("PCA64,Flat", None),
+        ("PCA256,Flat", None),
+        ("IVF1024,Flat", {"nprobe": 16}),
+        ("IVF1024,PQ64", {"nprobe": 16}),
+        ("HNSW32", {"efSearch": 64}),
+    ]
+
+    out_dir = os.path.join(PROJECT_DIR, "data", "tmp_faiss_bench")
+    os.makedirs(out_dir, exist_ok=True)
+
+    for name, params in test_list:
+        idx_path = os.path.join(out_dir, f"{name.replace(',', '_')}.index")
+        evaluate_index_factory(
+            index_factory_str=name,
+            x_gallery=Xg,
+            y_gallery=Lg,
+            x_query=Xq,
+            y_query=Lq,
+            k=50,
+            metric="L2",
+            index_path=idx_path,
+            params=params
+        )
 
     # ==== Data ====
     #INSHOP

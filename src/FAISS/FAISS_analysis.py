@@ -335,23 +335,16 @@ def grid_search_ivf(
     nprobe_param,             # [1, 4, 8, 16, 32]
     pca_dim_param,            # [None, 64, 128, 256]
     indexBuilder=create_ivf_index,
-    k: int = 20,              # 固定 k
-    n_per_label=None,         # 不再抽样，默认用全部 query；如需抽样可传入整数
-    save_csv=None,             # 若给路径，将额外保存 per-label 统计为 <save_csv>_per_label.csv
+    k: int = 20,
+    n_per_label=None,
+    save_csv=None,
     gallery_vector_path = FMNIST_VECTOR_GALLERY,
     gallery_label_path = FMNIST_LABEL_GALLERY,
     query_vector_path = FMNIST_VECTOR_QUERY,
     query_label_path = FMNIST_LABEL_QUERY
 
 ):
-    """
-    Gallery-only build; Query-only evaluate.
-    记录：
-      - build_time_s, query_time_ms, index_size_mb
-      - vector_recall_at_k（与 Flat-Gallery Top-k 重合度）
-      - label_precision_at_k_micro、label_recall_at_k_micro
-    另返回/保存 per-label 的 precision@k / recall@k（macro 参考）
-    """
+
     # ---------- 1) Load ----------
     xb_gallery = np.load(gallery_vector_path).astype("float32", order="C")
     y_gallery  = np.load(gallery_label_path).astype(int)
@@ -656,26 +649,26 @@ if __name__ == "__main__":
 
     plt.show()
 
-    # M_list = [16, 32, 48, 64]
-    # efC_list = [100, 200, 300]
-    # efS_list = [32, 64, 128, 256]
-    # K = 20
-    #
-    # df_hnsw = grid_search_hnsw(
-    #     M_param=M_list,
-    #     efC_param=efC_list,
-    #     efS_param=efS_list,
-    #     indexBuilder=create_index_hnsw,
-    #     k=K,
-    #     n_per_label=2,
-    #     save_csv=False,
-    # )
-    # print(df_hnsw.head())
-    #
-    # fig1 = plot_hnsw_build_and_size(df_hnsw)  # 两面板：Build / Size，维度= efConstruction × M
-    # fig2 = plot_hnsw_querytime(df_hnsw)  # 单图：Query Time，维度= efSearch × M（avg over efConstruction）
-    # fig3 = plot_hnsw_recall(df_hnsw, k_val=20)  # 单图：Recall，维度= efSearch × M（avg over efConstruction）
-    # plt.show()
+    M_list = [16, 32, 48, 64]
+    efC_list = [100, 200, 300]
+    efS_list = [32, 64, 128, 256]
+    K = 20
+
+    df_hnsw = grid_search_hnsw(
+        M_param=M_list,
+        efC_param=efC_list,
+        efS_param=efS_list,
+        indexBuilder=create_index_hnsw,
+        k=K,
+        n_per_label=2,
+        save_csv=False,
+    )
+    print(df_hnsw.head())
+
+    fig1 = plot_hnsw_build_and_size(df_hnsw)  # 两面板：Build / Size，维度= efConstruction × M
+    fig2 = plot_hnsw_querytime(df_hnsw)  # 单图：Query Time，维度= efSearch × M（avg over efConstruction）
+    fig3 = plot_hnsw_recall(df_hnsw, k_val=20)  # 单图：Recall，维度= efSearch × M（avg over efConstruction）
+    plt.show()
 
 
 
