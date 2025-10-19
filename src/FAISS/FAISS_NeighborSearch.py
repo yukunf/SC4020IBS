@@ -6,12 +6,13 @@ import time
 import faiss
 import hashlib
 import numpy as np
-import torch
+from matplotlib import pyplot as plt
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Torch和FAISS会双开OpenMP
 #from transformers import CLIPModel, CLIPProcessor
 from PIL import Image
 import torch
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
 MODEL_NAME = 'patrickjohncyh/fashion-clip'
 PROJECT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))  # /path/to/project
@@ -26,7 +27,6 @@ INSHOP_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_que
 INSHOP_LABEL_GALLERY_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_gallery.npy")
 INSHOP_LABEL_QUERY_NPY = os.path.join(PROJECT_DIR, "data", "inshop_clip_labels_query.npy")
 
-
 FMNIST_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "FMNIST_gallery_vectors.npy")
 FMNIST_LABEL_GALLERY = os.path.join(PROJECT_DIR, "data", "FMNIST_gallery_labels.npy")
 FMNIST_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "FMNIST_query_vectors.npy")
@@ -37,6 +37,7 @@ def get_device():
     if torch.cuda.is_available(): return torch.device("cuda")
     if torch.backends.mps.is_available(): return torch.device("mps")
     return torch.device("cpu")
+
 
 # def load_clip_model(model_name=MODEL_NAME):
 #     device = get_device()
@@ -59,7 +60,7 @@ def encode_image(path, model, processor, device, normalize=True):
 def encode_images(paths, model, processor, device, batch_size=64, normalize=True):
     embs = []
     for i in range(0, len(paths), batch_size):
-        batch_imgs = [Image.open(p).convert("RGB") for p in paths[i:i+batch_size]]
+        batch_imgs = [Image.open(p).convert("RGB") for p in paths[i:i + batch_size]]
         with torch.no_grad():
             inputs = processor(images=batch_imgs, return_tensors="pt", padding=True).to(device)
             feats = model.get_image_features(**inputs).detach().cpu().numpy().astype("float32")
@@ -99,13 +100,14 @@ def load_or_build_index(vectors_path=VECTORS_PATH, index_path=INDEX_PATH):
         print(f"New index built and saved to {index_path}")
     return index
 
+
 def load_or_create_index(
-    vectors_path=VECTORS_PATH,
-    index_path=INDEX_PATH,
-    model_name="FAISS-fashion",
-    index_factory_str="Flat",
-    metric="L2",  # or "IP"
-    force_rebuild=False,
+        vectors_path=VECTORS_PATH,
+        index_path=INDEX_PATH,
+        model_name="FAISS-fashion",
+        index_factory_str="Flat",
+        metric="L2",  # or "IP"
+        force_rebuild=False,
 ):
     """
     Create index by FAISS factory, can change the index type by changing strings for the factory function.
@@ -118,7 +120,6 @@ def load_or_create_index(
     """
     meta_path = index_path + ".meta.json"
 
-
     if os.path.exists(index_path) and not force_rebuild:
         # 载入 meta 验证
         try:
@@ -129,15 +130,14 @@ def load_or_create_index(
 
         # 若 meta 匹配，直接加载
         if (
-            meta.get("model_name") == model_name
-            and meta.get("index_type") == index_factory_str
-            and meta.get("vectors_md5") == md5sum(vectors_path)
+                meta.get("model_name") == model_name
+                and meta.get("index_type") == index_factory_str
+                and meta.get("vectors_md5") == md5sum(vectors_path)
         ):
             print(f"Loading existing index from {index_path}")
             return faiss.read_index(index_path)
 
         print("Meta changed — rebuilding index...")
-
 
     print("Building new index:", index_factory_str)
     xb = np.load(vectors_path).astype("float32", order="C")
@@ -177,6 +177,7 @@ def load_or_create_index(
 
     return index
 
+
 # def query_neighbors(index, queries, k=5):
 #     # 保证 numpy float32
 #     if isinstance(queries, torch.Tensor):
@@ -197,26 +198,26 @@ def load_or_create_index(
 
 
 def evaluate_index_factory(
-    index_factory_str: str,
-    x_gallery: np.ndarray,
-    y_gallery: np.ndarray,
-    x_query: np.ndarray,
-    y_query: np.ndarray,
-    *,
-    k: int = 50,
-    metric: str = "L2",
-    train_size_cap: int = 50000,
-    index_path: str = None,
-    params: dict = None
+        index_factory_str: str,
+        x_gallery: np.ndarray,
+        y_gallery: np.ndarray,
+        x_query: np.ndarray,
+        y_query: np.ndarray,
+        *,
+        k: int = 50,
+        metric: str = "L2",
+        train_size_cap: int = 50000,
+        index_path: str = None,
+        params: dict = None
 ):
     """
     使用 FAISS factory 构建并评测索引。
     增加：vector_recall@k（与 Flat 基线重合度）
     """
     x_gallery = np.asarray(x_gallery, dtype="float32", order="C")
-    x_query   = np.asarray(x_query,   dtype="float32", order="C")
+    x_query = np.asarray(x_query, dtype="float32", order="C")
     y_gallery = np.array(list(map(str, y_gallery)))
-    y_query   = np.array(list(map(str, y_query)))
+    y_query = np.array(list(map(str, y_query)))
 
     d = x_gallery.shape[1]
     nq = len(x_query)
@@ -260,9 +261,8 @@ def evaluate_index_factory(
     t1 = time.perf_counter()
     D, I = index.search(x_query, k)
     time_milli = ((time.perf_counter() - t1) * 1000.0)
-    avg_query_ms =  time_milli / max(1, nq)
-    qps = max(1,nq) / time_milli * 1000.0
-
+    avg_query_ms = time_milli / max(1, nq)
+    qps = max(1, nq) / time_milli * 1000.0
 
     # --- 5. 计算指标 ---
     # 向量命中率（vector recall）
@@ -271,6 +271,7 @@ def evaluate_index_factory(
 
     # 标签命中率（Acc@1/10/50）
     topk_labels = y_gallery[I]
+
     def acc_at_k(K):
         K = min(K, k)
         hits = (topk_labels[:, :K] == y_query[:, None]).any(axis=1)
@@ -303,34 +304,143 @@ def evaluate_index_factory(
         "n_query": nq,
     }
 
+
 if __name__ == "__main__":
-    Xg = np.load(INSHOP_VECTOR_GALLERY).astype("float32", order="C")
-    Lg = np.load(INSHOP_LABEL_GALLERY_NPY)
-    Xq = np.load(INSHOP_VECTOR_QUERY).astype("float32", order="C")
-    Lq = np.load(INSHOP_LABEL_QUERY_NPY)
+    # Xg = np.load(INSHOP_VECTOR_GALLERY).astype("float32", order="C")
+    # Lg = np.load(INSHOP_LABEL_GALLERY_NPY)
+    # Xq = np.load(INSHOP_VECTOR_QUERY).astype("float32", order="C")
+    # Lq = np.load(INSHOP_LABEL_QUERY_NPY)
+    #
+    # test_list = [
+    #     ("Flat", None),
+    #     ("PCA64,Flat", None),
+    #     ("PCA256,Flat", None),
+    #     ("IVF1024,Flat", {"nprobe": 16}),
+    #     ("IVF1024,PQ64", {"nprobe": 16}),
+    #     ("HNSW32", {"efSearch": 64}),
+    # ]
+    #
+    # out_dir = os.path.join(PROJECT_DIR, "data", "tmp_faiss_bench")
+    # os.makedirs(out_dir, exist_ok=True)
+    #
+    # for name, params in test_list:
+    #     idx_path = os.path.join(out_dir, f"{name.replace(',', '_')}.index")
+    #     evaluate_index_factory(
+    #         index_factory_str=name,
+    #         x_gallery=Xg,
+    #         y_gallery=Lg,
+    #         x_query=Xq,
+    #         y_query=Lq,
+    #         k=50,
+    #         metric="L2",
+    #         index_path=idx_path,
+    #         params=params
+    #     )
 
-    test_list = [
-        ("Flat", None),
-        ("PCA64,Flat", None),
-        ("PCA256,Flat", None),
-        ("IVF1024,Flat", {"nprobe": 16}),
-        ("IVF1024,PQ64", {"nprobe": 16}),
-        ("HNSW32", {"efSearch": 64}),
-    ]
+    # ==== Data ====
+    #INSHOP
+    index_names = ["Flat", "PCA64,Flat", "PCA256,Flat", "IVF1024,Flat", "IVF1024,PQ64", "HNSW32"]
+    vec_recall50 = [1.0000, 0.0647, 0.1849, 0.3586, 0.1264, 0.8453]
+    build_time_s = [0.094, 4.228, 4.257, 0.575, 25.539, 3.484]
+    qps = [23503.8, 157204.2, 96707.4, 19080.8, 42212.4, 4618.4]
 
-    out_dir = os.path.join(PROJECT_DIR, "data", "tmp_faiss_bench")
-    os.makedirs(out_dir, exist_ok=True)
+    # Fashion-MNIST
+    # vec_recall50 = [1.0000, 0.0261, 0.0429, 0.7404, 0.0826, 0.8141]
+    # build_time_s = [0.274, 4.360, 4.436, 1.808, 37.492, 38.671]
+    # qps = [6889.3, 66970.9, 34125.9, 3604.4, 34790.4, 3449.0]
 
-    for name, params in test_list:
-        idx_path = os.path.join(out_dir, f"{name.replace(',', '_')}.index")
-        evaluate_index_factory(
-            index_factory_str=name,
-            x_gallery=Xg,
-            y_gallery=Lg,
-            x_query=Xq,
-            y_query=Lq,
-            k=50,
-            metric="L2",
-            index_path=idx_path,
-            params=params
-        )
+    # === 2x2 subplot layout ===
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    x = np.arange(len(index_names))
+
+
+    # ---- (1) Build Time ----
+    axes[0, 0].bar(x, build_time_s, color="#4472C4")
+    axes[0, 0].set_xticks(x)
+    axes[0, 0].set_xticklabels(index_names, rotation=20, ha="right")
+    axes[0, 0].set_ylabel("Build Time (s)")
+    axes[0, 0].set_title("FMNIST: Build Time by Index")
+    axes[0, 0].grid(True, axis="y", linestyle="--", alpha=0.5)
+
+    # ---- (2) QPS ----
+    axes[0, 1].bar(x, qps, color="#ED7D31")
+    axes[0, 1].set_xticks(x)
+    axes[0, 1].set_xticklabels(index_names, rotation=20, ha="right")
+    axes[0, 1].set_ylabel("Queries per Second (QPS)")
+    axes[0, 1].set_title("FMNIST: QPS by Index")
+    axes[0, 1].grid(True, axis="y", linestyle="--", alpha=0.5)
+
+    # ---- (3) Vector Recall ----
+    axes[1, 0].bar(x, vec_recall50, color="#70AD47")
+    axes[1, 0].set_xticks(x)
+    axes[1, 0].set_xticklabels(index_names, rotation=20, ha="right")
+    axes[1, 0].set_ylabel("Vector Recall@50")
+    axes[1, 0].set_ylim(0, 1.05)
+    axes[1, 0].set_title("FMNIST: Vector Recall@50 by Index")
+    axes[1, 0].grid(True, axis="y", linestyle="--", alpha=0.5)
+
+    # ---- (4) QPS vs Recall trade-off ----
+    axes[1, 1].scatter(qps, vec_recall50, color="#A64D79")
+    for i, name in enumerate(index_names):
+        axes[1, 1].annotate(name, (qps[i], vec_recall50[i]), xytext=(5, 3), textcoords="offset points", fontsize=8)
+    axes[1, 1].set_xscale("log")
+    axes[1, 1].set_xlabel("QPS (log scale)")
+    axes[1, 1].set_ylabel("Vector Recall@50")
+    axes[1, 1].set_title("FMNIST: QPS vs Recall@50 (Tradeoff)")
+    axes[1, 1].grid(True, linestyle="--", alpha=0.5)
+
+    plt.tight_layout()
+    plt.suptitle("Metrics for MNIST on INSHOP")
+    plt.show()
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Data for Fashion-MNIST
+    index_types_fmnist = ["Flat", "PCA64,Flat", "PCA256,Flat", "IVF1024,Flat", "IVF1024,PQ64", "HNSW32"]
+    acc50_fmnist = [1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000]
+    recall50_fmnist = [1.0000, 0.0261, 0.0429, 0.7404, 0.0826, 0.8141]
+    qps_fmnist = [6889.3, 66970.9, 34125.9, 3604.4, 34790.4, 3449.0]
+
+    # INSHOP
+    index_types_inshop = index_types_fmnist
+    acc50_inshop = [1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000]
+    recall50_inshop = [1.0000, 0.0647, 0.1849, 0.3586, 0.1264, 0.8453]
+    qps_inshop = [23503.8, 157204.2, 96707.4, 19080.8, 42212.4, 4618.4]
+
+    # --- Plot 1: Accuracy@50 vs QPS (Scatter) ---
+    plt.figure(figsize=(8, 5))
+    plt.scatter(qps_fmnist, acc50_fmnist, marker="o", label="Fashion-MNIST")
+    plt.scatter(qps_inshop, acc50_inshop, marker="s", label="In-Shop")
+    plt.xscale("log")
+    plt.xlabel("QPS (log scale)")
+    plt.ylabel("Accuracy@50")
+    plt.title("Accuracy@50 vs QPS across datasets")
+    plt.legend()
+    plt.grid(True, ls="--", alpha=0.5)
+
+    # 可选：添加数据点注释（索引类型）
+    for i, name in enumerate(index_types_fmnist):
+        plt.annotate(name, (qps_fmnist[i], acc50_fmnist[i]), xytext=(5, 3), textcoords="offset points", fontsize=8)
+    for i, name in enumerate(index_types_inshop):
+        plt.annotate(name, (qps_inshop[i], acc50_inshop[i]), xytext=(5, 3), textcoords="offset points", fontsize=8)
+
+    # --- Plot 2: Recall@50 vs QPS (Scatter) ---
+    plt.figure(figsize=(8, 5))
+    plt.scatter(qps_fmnist, recall50_fmnist, marker="o", label="Fashion-MNIST")
+    plt.scatter(qps_inshop, recall50_inshop, marker="s", label="In-Shop")
+    plt.xscale("log")
+    plt.xlabel("QPS (log scale)")
+    plt.ylabel("Vector Recall@50")
+    plt.title("Vector Recall@50 vs QPS across datasets")
+    plt.legend()
+    plt.grid(True, ls="--", alpha=0.5)
+
+    # 同样加注释（可选）
+    for i, name in enumerate(index_types_fmnist):
+        plt.annotate(name, (qps_fmnist[i], recall50_fmnist[i]), xytext=(5, 3), textcoords="offset points", fontsize=8)
+    for i, name in enumerate(index_types_inshop):
+        plt.annotate(name, (qps_inshop[i], recall50_inshop[i]), xytext=(5, 3), textcoords="offset points", fontsize=8)
+
+    plt.show()
+
