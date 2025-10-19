@@ -1,14 +1,11 @@
-import FAISS_NeighborSearch
 
 import time, os, numpy as np, pandas as pd, matplotlib.pyplot as plt, faiss
-import math
-from typing import Optional, Union
+from typing import Union
 
-from src.FAISS_NeighborSearch import PROJECT_DIR
-
+from src.FAISS import FAISS_NeighborSearch
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
-PROJECT_DIR = os.path.dirname(BASE_DIR)
+PROJECT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 
 INSHOP_VECTOR_GALLERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_gallery.npy")
 INSHOP_VECTOR_QUERY = os.path.join(PROJECT_DIR, "data", "inshop_clip_vectors_query.npy")
