@@ -143,79 +143,93 @@ import math
 
 def _facet_by_pca(df: pd.DataFrame, value_col: str, title_prefix: str, cmap="viridis"):
     pcas = sorted(df["pca_dim"].unique())
-    cols = min(4, max(1, len(pcas)))
-    rows = math.ceil(len(pcas) / cols)
-    fig, axes = plt.subplots(rows, cols, figsize=(4.5*cols, 4.0*rows))
+    cols, rows = 2, 3   # 固定为 3x2 布局
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 12))
     axes = np.array(axes, ndmin=2)
 
     used = 0
-    for i, p in enumerate(pcas):
+    for i, p in enumerate(pcas[:rows * cols]):  # 最多显示 6 个 PCA 子图
         r, c = divmod(i, cols)
         ax = axes[r, c]
         sub = df[df["pca_dim"] == p].groupby(["nprobe", "nlist"], as_index=False)[value_col].mean()
         piv = sub.pivot_table(index="nprobe", columns="nlist", values=value_col, aggfunc="mean").sort_index().sort_index(axis=1)
         im = ax.imshow(piv.values, aspect="auto", cmap=cmap)
         _annotate_cells(ax, piv.values)
-        ax.set_title(f"PCA={int(p) if p!=0 else 'None'}")
-        ax.set_xlabel("nlist"); ax.set_ylabel("nprobe")
-        ax.set_xticks(np.arange(piv.shape[1])); ax.set_xticklabels(piv.columns.astype(int))
-        ax.set_yticks(np.arange(piv.shape[0])); ax.set_yticklabels(piv.index.astype(int))
+        ax.set_title(f"PCA={int(p) if p != 0 else 'None'}")
+        ax.set_xlabel("nlist")
+        ax.set_ylabel("nprobe")
+        ax.set_xticks(np.arange(piv.shape[1]))
+        ax.set_xticklabels(piv.columns.astype(int))
+        ax.set_yticks(np.arange(piv.shape[0]))
+        ax.set_yticklabels(piv.index.astype(int))
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         used += 1
 
-    for j in range(used, rows*cols):
+    # 把剩下的空子图隐藏掉
+    for j in range(used, rows * cols):
         r, c = divmod(j, cols)
         axes[r, c].axis("off")
 
-    fig.suptitle(f"{title_prefix} — (faceted by PCA)")
+    fig.suptitle(f"{title_prefix} — (faceted by PCA)", y=0.995)
     fig.tight_layout()
     return fig
 
 
-def plot_ivf_build_and_size_panels(df: pd.DataFrame,dataset_title: str):
+
+def plot_ivf_build_and_size_panels(df: pd.DataFrame, dataset_title: str):
     agg = df.groupby(["pca_dim", "nlist"], as_index=False)[["build_time_s", "index_size_mb"]].mean()
 
     piv_build = agg.pivot_table(index="pca_dim", columns="nlist", values="build_time_s", aggfunc="mean").sort_index().sort_index(axis=1)
     piv_size  = agg.pivot_table(index="pca_dim", columns="nlist", values="index_size_mb", aggfunc="mean").sort_index().sort_index(axis=1)
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    # 3x2 布局（虽然这里只画两张图，保持你要求的网格尺寸不变）
+    fig, axes = plt.subplots(3, 2, figsize=(12, 10))
     cmap = "viridis"
 
-    im1 = axes[0].imshow(piv_build.values, aspect="auto", cmap=cmap)
-    _annotate_cells(axes[0], piv_build.values)
-    axes[0].set_title("Build Time (s)")
-    axes[0].set_xlabel("nlist"); axes[0].set_ylabel("PCA dim")
-    axes[0].set_xticks(np.arange(piv_build.shape[1])); axes[0].set_xticklabels(piv_build.columns.astype(int))
-    axes[0].set_yticks(np.arange(piv_build.shape[0])); axes[0].set_yticklabels(piv_build.index.astype(int))
-    fig.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)
+    # --- (0,0) Build Time ---
+    ax = axes[0, 0]
+    im1 = ax.imshow(piv_build.values, aspect="auto", cmap=cmap)
+    _annotate_cells(ax, piv_build.values)
+    ax.set_title("Build Time (s)")
+    ax.set_xlabel("nlist"); ax.set_ylabel("PCA dim")
+    ax.set_xticks(np.arange(piv_build.shape[1])); ax.set_xticklabels(piv_build.columns.astype(int))
+    ax.set_yticks(np.arange(piv_build.shape[0])); ax.set_yticklabels(piv_build.index.astype(int))
+    fig.colorbar(im1, ax=ax, fraction=0.046, pad=0.04)
 
-    im2 = axes[1].imshow(piv_size.values, aspect="auto", cmap=cmap)
-    _annotate_cells(axes[1], piv_size.values)
-    axes[1].set_title("Index Size (MB)")
-    axes[1].set_xlabel("nlist"); axes[1].set_ylabel("PCA dim")
-    axes[1].set_xticks(np.arange(piv_size.shape[1])); axes[1].set_xticklabels(piv_size.columns.astype(int))
-    axes[1].set_yticks(np.arange(piv_size.shape[0])); axes[1].set_yticklabels(piv_size.index.astype(int))
-    fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
+    # --- (0,1) Index Size ---
+    ax = axes[0, 1]
+    im2 = ax.imshow(piv_size.values, aspect="auto", cmap=cmap)
+    _annotate_cells(ax, piv_size.values)
+    ax.set_title("Index Size (MB)")
+    ax.set_xlabel("nlist"); ax.set_ylabel("PCA dim")
+    ax.set_xticks(np.arange(piv_size.shape[1])); ax.set_xticklabels(piv_size.columns.astype(int))
+    ax.set_yticks(np.arange(piv_size.shape[0])); ax.set_yticklabels(piv_size.index.astype(int))
+    fig.colorbar(im2, ax=ax, fraction=0.046, pad=0.04)
 
-    fig.suptitle(f"Dataset:{dataset_title} IVF — PCA × nlist")
+    # 其余子图位置留空，避免干扰
+    axes[1, 0].axis("off")
+    axes[1, 1].axis("off")
+    axes[2, 0].axis("off")
+    axes[2, 1].axis("off")
+
+    fig.suptitle(f"Dataset: {dataset_title} — IVF (PCA × nlist)", y=0.98)
     fig.tight_layout()
     return fig
-
 
 
 def plot_ivf_querytime_by_pca(df: pd.DataFrame,dataset_title: str):
     return _facet_by_pca(df, value_col="query_time_ms", title_prefix=f"Data:{dataset_title} Query Time (ms)", cmap="coolwarm")
 
 def plot_ivf_vector_recall_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
-    fig = _facet_by_pca(df, value_col="vector_recall_at_k", title_prefix=f"Data:{dataset_title} Vector Recall@{k_val}", cmap="viridis")
+    fig = _facet_by_pca(df, value_col="vector_recall_at_k", title_prefix=f"Data:{dataset_title} Vector Recall@{k_val}", cmap="coolwarm")
     return fig
 
 def plot_ivf_label_precision_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
-    fig = _facet_by_pca(df, value_col="label_precision_at_k_micro", title_prefix=f"Data:{dataset_title} Label Precision@{k_val} (micro)", cmap="plasma")
+    fig = _facet_by_pca(df, value_col="label_precision_at_k_micro", title_prefix=f"Data:{dataset_title} Label Precision@{k_val} (micro)", cmap="coolwarm")
     return fig
 
 def plot_ivf_label_recall_by_pca(df: pd.DataFrame, dataset_title:str, k_val: int = 20):
-    fig = _facet_by_pca(df, value_col="label_recall_at_k_micro", title_prefix=f"Data:{dataset_title} Label Recall@{k_val} (micro)", cmap="viridis")
+    fig = _facet_by_pca(df, value_col="label_recall_at_k_micro", title_prefix=f"Data:{dataset_title} Label Recall@{k_val} (micro)", cmap="coolwarm")
     return fig
 
 def plot_ivf_macro_for_label(df_label: pd.DataFrame, label_id: int, k_val: int = 20):
@@ -584,7 +598,30 @@ def grid_search_hnsw(
         print(f"Saved: {csv_path}")
     return df
 
+def plot_ivf_from_csv(csv_path: str, dataset_title: str, k_val: int = 20):
+    df = pd.read_csv(csv_path)
+    # 可选：只保留指定 k
+    if "k" in df.columns:
+        df = df[df["k"] == k_val].copy()
 
+    # 强制类型，避免字符串混入
+    enforce_cols = [
+        "pca_dim","nlist","nprobe","k",
+        "build_time_s","query_time_ms","index_size_mb",
+        "vector_recall_at_k","label_precision_at_k_micro","label_recall_at_k_micro","n_query"
+    ]
+    for col in enforce_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["pca_dim","nlist","nprobe"]).copy()
+
+    # 逐指标绘图（每个指标一张 3×2 图）
+    _facet_by_pca(df, "query_time_ms",           f"{dataset_title}: Query Time (ms)",           cmap="coolwarm")
+    _facet_by_pca(df, "vector_recall_at_k",      f"{dataset_title}: Vector Recall@{k_val}",     cmap="viridis")
+    _facet_by_pca(df, "label_precision_at_k_micro", f"{dataset_title}: Label Precision@{k_val} (micro)", cmap="viridis")
+    _facet_by_pca(df, "label_recall_at_k_micro", f"{dataset_title}: Label Recall@{k_val} (micro)",    cmap="viridis")
+
+    plt.show()
 
 
 
@@ -640,6 +677,8 @@ if __name__ == "__main__":
         query_label_path=INSHOP_LABEL_QUERY_NPY
     )
 
+    df = pd.read_csv("/Users/fengyukun/Documents/NTULearn/y3s1/SC4020 Data Mining/project/data/ivf_INSHOP_query_metrics.csv",la)
+
     # === 只输出聚合后的大图 ===
     plot_ivf_build_and_size_panels(df,'INSHOP')
     plot_ivf_querytime_by_pca(df,'INSHOP')
@@ -649,26 +688,27 @@ if __name__ == "__main__":
 
     plt.show()
 
-    M_list = [16, 32, 48, 64]
-    efC_list = [100, 200, 300]
-    efS_list = [32, 64, 128, 256]
-    K = 20
-
-    df_hnsw = grid_search_hnsw(
-        M_param=M_list,
-        efC_param=efC_list,
-        efS_param=efS_list,
-        indexBuilder=create_index_hnsw,
-        k=K,
-        n_per_label=2,
-        save_csv=False,
-    )
-    print(df_hnsw.head())
-
-    fig1 = plot_hnsw_build_and_size(df_hnsw)  # 两面板：Build / Size，维度= efConstruction × M
-    fig2 = plot_hnsw_querytime(df_hnsw)  # 单图：Query Time，维度= efSearch × M（avg over efConstruction）
-    fig3 = plot_hnsw_recall(df_hnsw, k_val=20)  # 单图：Recall，维度= efSearch × M（avg over efConstruction）
-    plt.show()
+    plot_ivf_from_csv(os.path.join(PROJECT_DIR, "data", "ivf_INSHOP_query_metrics.csv"), "INSHOP", k_val=20)
+    # M_list = [16, 32, 48, 64]
+    # efC_list = [100, 200, 300]
+    # efS_list = [32, 64, 128, 256]
+    # K = 20
+    #
+    # df_hnsw = grid_search_hnsw(
+    #     M_param=M_list,
+    #     efC_param=efC_list,
+    #     efS_param=efS_list,
+    #     indexBuilder=create_index_hnsw,
+    #     k=K,
+    #     n_per_label=2,
+    #     save_csv=True,
+    # )
+    # print(df_hnsw.head())
+    #
+    # fig1 = plot_hnsw_build_and_size(df_hnsw)  # 两面板：Build / Size，维度= efConstruction × M
+    # fig2 = plot_hnsw_querytime(df_hnsw)  # 单图：Query Time，维度= efSearch × M（avg over efConstruction）
+    # fig3 = plot_hnsw_recall(df_hnsw, k_val=20)  # 单图：Recall，维度= efSearch × M（avg over efConstruction）
+    # plt.show()
 
 
 
