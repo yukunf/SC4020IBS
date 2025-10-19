@@ -9,7 +9,7 @@ import json
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /path/to/project/src
-PROJECT_DIR = os.path.dirname(BASE_DIR)
+PROJECT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 # ============== Configuration =================
 presets = {
     "speed": {
